@@ -1,0 +1,11 @@
+services:
+  udemy-downloader:
+    build: .
+    container_name: udemy-project-downloader
+    ports:
+      - "127.0.0.1:8080:8000"
+    volumes:
+      - ./downloads:/downloads
+      - ./data:/app/data
+    restart: unless-stopped
+

@@ -1,0 +1,7 @@
+fastapi==0.115.6
+python-multipart==0.0.20
+requests==2.32.3
+uvicorn[standard]==0.34.0
+yt-dlp==2026.6.9
+certifi==2026.6.17
+truststore==0.10.4

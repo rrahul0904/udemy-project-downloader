@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Udemy Project Downloader</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace">
+        <aside class="panel">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">UD</div>
+            <div>
+              <h1>Udemy Project Downloader</h1>
+              <p>Local archive console</p>
+            </div>
+          </div>
+
+          <form id="job-form" class="form">
+            <label>
+              <span>Course URL</span>
+              <input
+                name="course_url"
+                type="url"
+                placeholder="https://www.udemy.com/course/example/"
+                required
+              />
+            </label>
+
+            <fieldset class="auth-box">
+              <legend>Authentication</legend>
+              <label>
+                <input name="auth_method" type="radio" value="browser" checked />
+                <span>Use local browser session</span>
+              </label>
+              <label>
+                <input name="auth_method" type="radio" value="cookies_file" />
+                <span>Upload cookies.txt</span>
+              </label>
+            </fieldset>
+
+            <label id="browser-row">
+              <span>Browser</span>
+              <select name="browser">
+                <option value="chrome">Chrome</option>
+                <option value="safari">Safari</option>
+                <option value="firefox">Firefox</option>
+                <option value="brave">Brave</option>
+                <option value="edge">Edge</option>
+                <option value="chromium">Chromium</option>
+                <option value="vivaldi">Vivaldi</option>
+                <option value="opera">Opera</option>
+              </select>
+            </label>
+
+            <label id="cookies-row" hidden>
+              <span>Cookies file</span>
+              <input name="cookies_file" type="file" accept=".txt,text/plain" />
+            </label>
+
+            <div class="row">
+              <label>
+                <span>Quality</span>
+                <select name="quality">
+                  <option value="best">Best</option>
+                  <option value="1080">1080p max</option>
+                  <option value="720">720p max</option>
+                  <option value="480">480p max</option>
+                  <option value="360">360p max</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Subtitle lang</span>
+                <input name="subtitle_languages" value="en.*" />
+              </label>
+            </div>
+
+            <div class="checks">
+              <label>
+                <input name="subtitles" type="checkbox" checked />
+                <span>Manual subtitles</span>
+              </label>
+              <label>
+                <input name="auto_subtitles" type="checkbox" />
+                <span>Auto subtitles</span>
+              </label>
+              <label>
+                <input name="include_practice_tests" type="checkbox" checked />
+                <span>Practice tests</span>
+              </label>
+            </div>
+
+            <label class="confirm">
+              <input name="confirm_authorized" type="checkbox" required />
+              <span>I am authorized to archive this course for local personal use.</span>
+            </label>
+
+            <button class="primary" type="submit">Start Download</button>
+            <p id="form-message" class="message" role="status"></p>
+          </form>
+        </aside>
+
+        <section class="main-panel">
+          <div class="toolbar">
+            <div>
+              <h2>Jobs</h2>
+              <p id="download-root">Downloads folder loading...</p>
+            </div>
+            <button id="refresh" type="button">Refresh</button>
+          </div>
+
+          <div class="job-grid">
+            <section class="list-panel">
+              <div id="jobs" class="jobs"></div>
+            </section>
+
+            <section class="log-panel">
+              <div class="log-head">
+                <h2>Log</h2>
+                <button id="cancel-job" type="button" disabled>Cancel</button>
+              </div>
+              <pre id="logs" class="logs">No job selected.</pre>
+            </section>
+          </div>
+
+          <section class="downloads">
+            <div class="downloads-head">
+              <h2>Downloads</h2>
+              <p id="disk"></p>
+            </div>
+            <div id="files" class="files"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
