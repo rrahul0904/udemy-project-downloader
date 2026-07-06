@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .jobs import JobConfig, JobManager, SUPPORTED_BROWSER_COOKIES, disk_usage
-from .safety import UrlValidationError, normalize_udemy_url
+from .safety import UrlValidationError, normalize_supported_url
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -17,9 +17,9 @@ DOWNLOAD_DIR = Path(os.getenv("DOWNLOAD_DIR", str(BASE_DIR / "downloads"))).reso
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data"))).resolve()
 MAX_COOKIES_BYTES = 8 * 1024 * 1024
 ALLOWED_QUALITIES = {"best", "1080", "720", "480", "360"}
-ALLOWED_AUTH_METHODS = {"cookies_file", "browser"}
+ALLOWED_AUTH_METHODS = {"none", "cookies_file", "browser"}
 
-app = FastAPI(title="Udemy Project Downloader")
+app = FastAPI(title="Local Media Downloader")
 manager = JobManager(DOWNLOAD_DIR, DATA_DIR)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -37,7 +37,7 @@ async def health() -> dict[str, str]:
 @app.post("/api/jobs")
 async def create_job(
     course_url: str = Form(...),
-    auth_method: str = Form("cookies_file"),
+    auth_method: str = Form("none"),
     cookies_file: UploadFile | None = File(None),
     browser: str = Form("chrome"),
     quality: str = Form("best"),
@@ -48,10 +48,10 @@ async def create_job(
     confirm_authorized: bool = Form(False),
 ) -> dict[str, Any]:
     if not confirm_authorized:
-        raise HTTPException(status_code=400, detail="Confirm that you are authorized to archive this course.")
+        raise HTTPException(status_code=400, detail="Confirm that you are authorized to archive this content.")
 
     try:
-        normalized_url = normalize_udemy_url(course_url)
+        normalized = normalize_supported_url(course_url)
     except UrlValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -59,6 +59,11 @@ async def create_job(
         raise HTTPException(status_code=400, detail="Unsupported quality selection.")
     if auth_method not in ALLOWED_AUTH_METHODS:
         raise HTTPException(status_code=400, detail="Unsupported authentication method.")
+    if normalized.platform == "udemy" and auth_method == "none":
+        raise HTTPException(
+            status_code=400,
+            detail="Udemy downloads require a local browser session or a cookies.txt file.",
+        )
     if auth_method == "browser" and browser not in SUPPORTED_BROWSER_COOKIES:
         raise HTTPException(status_code=400, detail="Unsupported local browser selection.")
 
@@ -77,14 +82,15 @@ async def create_job(
             raise HTTPException(status_code=400, detail="Cookies file is larger than 8 MB.")
 
     config = JobConfig(
-        course_url=normalized_url,
+        course_url=normalized.url,
+        platform=normalized.platform,
         auth_method=auth_method,
         browser=browser if auth_method == "browser" else None,
         quality=quality,
         subtitles=subtitles,
         auto_subtitles=auto_subtitles,
         subtitle_languages=subtitle_languages,
-        include_practice_tests=include_practice_tests,
+        include_practice_tests=include_practice_tests if normalized.platform == "udemy" else False,
     )
     job = await manager.create_job(config, cookies_bytes)
     return job.as_dict()

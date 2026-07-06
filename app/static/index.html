@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Udemy Project Downloader</title>
+    <title>Local Media Downloader</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
@@ -11,20 +11,20 @@
       <section class="workspace">
         <aside class="panel">
           <div class="brand">
-            <div class="brand-mark" aria-hidden="true">UD</div>
+            <div class="brand-mark" aria-hidden="true">LD</div>
             <div>
-              <h1>Udemy Project Downloader</h1>
+              <h1>Local Media Downloader</h1>
               <p>Local archive console</p>
             </div>
           </div>
 
           <form id="job-form" class="form">
             <label>
-              <span>Course URL</span>
+              <span>Course or video URL</span>
               <input
                 name="course_url"
                 type="url"
-                placeholder="https://www.udemy.com/course/example/"
+                placeholder="https://www.udemy.com/course/example/ or https://www.youtube.com/watch?v=..."
                 required
               />
             </label>
@@ -32,7 +32,11 @@
             <fieldset class="auth-box">
               <legend>Authentication</legend>
               <label>
-                <input name="auth_method" type="radio" value="browser" checked />
+                <input name="auth_method" type="radio" value="none" checked />
+                <span>No cookies</span>
+              </label>
+              <label>
+                <input name="auth_method" type="radio" value="browser" />
                 <span>Use local browser session</span>
               </label>
               <label>
@@ -89,13 +93,13 @@
               </label>
               <label>
                 <input name="include_practice_tests" type="checkbox" checked />
-                <span>Practice tests</span>
+                <span>Udemy practice tests</span>
               </label>
             </div>
 
             <label class="confirm">
               <input name="confirm_authorized" type="checkbox" required />
-              <span>I am authorized to archive this course for local personal use.</span>
+              <span>I am authorized to archive this content for local personal use.</span>
             </label>
 
             <button class="primary" type="submit">Start Download</button>

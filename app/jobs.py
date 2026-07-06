@@ -23,6 +23,7 @@ SUPPORTED_BROWSER_COOKIES = {"brave", "chrome", "chromium", "edge", "firefox", "
 @dataclass
 class JobConfig:
     course_url: str
+    platform: str
     auth_method: str
     browser: str | None
     quality: str
@@ -61,6 +62,7 @@ class Job:
             "updated_at": self.updated_at,
             "return_code": self.return_code,
             "course_url": self.config.course_url,
+            "platform": self.config.platform,
             "auth_method": self.config.auth_method,
             "browser": self.config.browser,
             "quality": self.config.quality,
@@ -126,7 +128,7 @@ class JobManager:
         job.add_log("Starting yt-dlp.")
 
         try:
-            if cookies_path is None:
+            if cookies_path is None and job.config.auth_method == "browser":
                 cookies_path = await self._extract_browser_cookies(job)
 
             command = self._build_command(job, cookies_path)
@@ -150,7 +152,7 @@ class JobManager:
             if job.status == "cancelled":
                 return
 
-            if job.config.include_practice_tests:
+            if job.config.include_practice_tests and job.config.platform == "udemy":
                 await self._export_practice_tests(job, cookies_path)
 
             job.status = "succeeded" if job.return_code == 0 else "failed"
@@ -186,17 +188,15 @@ class JobManager:
         jar.filename = str(cookies_path)
         jar.save(str(cookies_path), ignore_discard=True, ignore_expires=True)
 
-    def _build_command(self, job: Job, cookies_path: Path) -> list[str]:
+    def _build_command(self, job: Job, cookies_path: Path | None) -> list[str]:
         config = job.config
         command = [
             sys.executable,
             str(Path(__file__).with_name("yt_dlp_truststore.py")),
-            "--cookies",
-            str(cookies_path),
             "--paths",
             str(job.output_dir),
             "--output",
-            "%(playlist_title)s/%(playlist_index)03d - %(title)s.%(ext)s",
+            self._output_template(config.platform),
             "--output-na-placeholder",
             "Unknown",
             "--download-archive",
@@ -221,6 +221,9 @@ class JobManager:
             "1",
         ]
 
+        if cookies_path:
+            command.extend(["--cookies", str(cookies_path)])
+
         fmt = self._format_selector(config.quality)
         if fmt:
             command.extend(["--format", fmt])
@@ -232,18 +235,29 @@ class JobManager:
         if config.subtitles or config.auto_subtitles:
             command.extend(["--sub-langs", config.subtitle_languages or "en.*"])
 
-        command.append(self._yt_dlp_course_url(config.course_url))
+        if config.platform == "youtube" and not self._is_explicit_youtube_playlist(config.course_url):
+            command.append("--no-playlist")
+
+        command.append(self._yt_dlp_url(config))
         return command
 
     @staticmethod
-    def _yt_dlp_course_url(course_url: str) -> str:
+    def _yt_dlp_url(config: JobConfig) -> str:
+        if config.platform != "udemy":
+            return config.course_url
+
+        course_url = config.course_url
         parsed = urlparse(course_url)
         parts = [part for part in parsed.path.split("/") if part]
         if len(parts) >= 2 and parts[0] == "course":
             return urlunparse((parsed.scheme, parsed.netloc, f"/{parts[1]}/", "", parsed.query, ""))
         return course_url
 
-    async def _export_practice_tests(self, job: Job, cookies_path: Path) -> None:
+    async def _export_practice_tests(self, job: Job, cookies_path: Path | None) -> None:
+        if not cookies_path:
+            job.add_log("Practice test export skipped: Udemy authentication cookies are required.")
+            return
+
         job.add_log("Exporting practice tests and quizzes.")
         practice_dir = job.output_dir / "_practice-tests"
         try:
@@ -271,6 +285,18 @@ class JobManager:
         if quality in {"1080", "720", "480", "360"}:
             return f"bv*[height<={quality}]+ba/b[height<={quality}]/best[height<={quality}]"
         return None
+
+    @staticmethod
+    def _output_template(platform: str) -> str:
+        if platform == "youtube":
+            return "%(title)s [%(id)s].%(ext)s"
+        return "%(playlist_title)s/%(playlist_index)03d - %(title)s.%(ext)s"
+
+    @staticmethod
+    def _is_explicit_youtube_playlist(url: str) -> bool:
+        parsed = urlparse(url)
+        parts = [part for part in parsed.path.split("/") if part]
+        return parts[:1] == ["playlist"]
 
 
 def disk_usage(path: Path) -> dict[str, int]:

@@ -9,13 +9,21 @@ const refreshButton = document.querySelector("#refresh");
 const cancelButton = document.querySelector("#cancel-job");
 const browserRow = document.querySelector("#browser-row");
 const cookiesRow = document.querySelector("#cookies-row");
+const urlInput = form.elements.course_url;
+const practiceTestsInput = form.elements.include_practice_tests;
 
 let selectedJobId = null;
 let latestJobs = [];
+let authTouched = false;
 
 for (const input of form.elements.auth_method) {
-  input.addEventListener("change", syncAuthMode);
+  input.addEventListener("change", () => {
+    authTouched = true;
+    syncAuthMode();
+  });
 }
+
+urlInput.addEventListener("input", syncUrlMode);
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -41,9 +49,11 @@ form.addEventListener("submit", async (event) => {
 
     selectedJobId = payload.id;
     form.reset();
-    form.elements.auth_method.value = "browser";
+    authTouched = false;
+    form.elements.auth_method.value = "none";
     form.elements.subtitles.checked = true;
     form.elements.include_practice_tests.checked = true;
+    form.elements.include_practice_tests.disabled = false;
     form.elements.subtitle_languages.value = "en.*";
     syncAuthMode();
     await refreshAll();
@@ -90,14 +100,21 @@ function renderJobs() {
     .map((job) => {
       const title = courseTitle(job.course_url);
       const created = new Date(job.created_at).toLocaleString();
-      const auth = job.auth_method === "browser" ? `browser: ${job.browser}` : "cookies.txt";
+      const auth =
+        job.auth_method === "none"
+          ? "no cookies"
+          : job.auth_method === "browser"
+            ? `browser: ${job.browser}`
+            : "cookies.txt";
+      const platform = job.platform || "udemy";
+      const content = platform === "udemy" && job.include_practice_tests ? "tests" : "media";
       return `
         <article class="job ${job.id === selectedJobId ? "active" : ""}" data-job="${job.id}">
           <div class="job-top">
             <span class="job-title" title="${escapeHtml(job.course_url)}">${escapeHtml(title)}</span>
             <span class="status ${job.status}">${escapeHtml(job.status)}</span>
           </div>
-          <div class="job-meta">${created} · ${escapeHtml(job.quality)} · ${escapeHtml(auth)} · ${job.include_practice_tests ? "tests" : "media"}</div>
+          <div class="job-meta">${created} · ${escapeHtml(platform)} · ${escapeHtml(job.quality)} · ${escapeHtml(auth)} · ${content}</div>
         </article>
       `;
     })
@@ -114,10 +131,29 @@ function renderJobs() {
 
 function syncAuthMode() {
   const mode = form.elements.auth_method.value;
+  const useBrowser = mode === "browser";
   const useCookiesFile = mode === "cookies_file";
-  browserRow.hidden = useCookiesFile;
+  browserRow.hidden = !useBrowser;
   cookiesRow.hidden = !useCookiesFile;
   form.elements.cookies_file.required = useCookiesFile;
+}
+
+function syncUrlMode() {
+  const platform = detectPlatform(urlInput.value);
+  if (platform === "youtube") {
+    practiceTestsInput.checked = false;
+    practiceTestsInput.disabled = true;
+    if (!authTouched) {
+      form.elements.auth_method.value = "none";
+    }
+  } else {
+    practiceTestsInput.disabled = false;
+    if (platform === "udemy" && !authTouched) {
+      form.elements.auth_method.value = "browser";
+      practiceTestsInput.checked = true;
+    }
+  }
+  syncAuthMode();
 }
 
 function renderSelectedLog() {
@@ -163,6 +199,18 @@ async function loadDownloads() {
 function courseTitle(url) {
   try {
     const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host === "youtu.be") {
+      return parsed.pathname.split("/").filter(Boolean)[0] || host;
+    }
+    if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+      const videoId = parsed.searchParams.get("v");
+      const playlistId = parsed.searchParams.get("list");
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      if (videoId) return `youtube-${videoId}`;
+      if (parts[0] === "playlist" && playlistId) return `playlist-${playlistId}`;
+      if (["shorts", "embed", "live"].includes(parts[0]) && parts[1]) return `youtube-${parts[1]}`;
+    }
     const parts = parsed.pathname.split("/").filter(Boolean);
     return parts[parts.length - 1] || parsed.hostname;
   } catch {
@@ -195,6 +243,29 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function detectPlatform(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host === "udemy.com" || host.endsWith(".udemy.com")) return "udemy";
+    if (
+      host === "youtu.be" ||
+      host === "youtube.com" ||
+      host === "www.youtube.com" ||
+      host === "m.youtube.com" ||
+      host === "music.youtube.com" ||
+      host === "youtube-nocookie.com" ||
+      host === "www.youtube-nocookie.com"
+    ) {
+      return "youtube";
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 refreshAll();
 syncAuthMode();
+syncUrlMode();
 setInterval(refreshAll, 2500);
