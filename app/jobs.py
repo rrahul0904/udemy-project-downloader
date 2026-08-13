@@ -275,6 +275,8 @@ class JobManager:
             "Practice test export complete: "
             f"{result.item_count} item(s), {result.assessment_count} question(s)."
         )
+        job.add_log(f"Practice test files written to {practice_dir}.")
+        job.add_log(f"Practice test PDF ready: {result.output_pdf.name}.")
         if result.warnings:
             job.add_log(f"Practice export warnings: {len(result.warnings)}. See practice-tests.html.")
 

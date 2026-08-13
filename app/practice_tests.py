@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import re
-from html import escape
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from html import escape, unescape
 from http.cookiejar import MozillaCookieJar
 from pathlib import Path
 from typing import Any
@@ -32,6 +32,7 @@ class PracticeExportResult:
     output_json: Path
     output_markdown: Path
     output_html: Path
+    output_pdf: Path
     warnings: list[str]
 
 
@@ -60,12 +61,20 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
     for item in practice_items:
         item_id = _item_id(item)
         item_title = _item_title(item)
+        item_version = _item_version(item)
+        expected_count = _item_expected_count(item)
         assessments: list[dict[str, Any]] = []
         item_warnings: list[str] = []
         if item_id:
-            assessments, item_warnings = _fetch_assessments(session, course_url, str(item_id))
+            assessments, item_warnings = _fetch_assessments(session, course_url, str(item_id), item_version)
         else:
             item_warnings.append(f"Could not determine a quiz id for '{item_title}'.")
+
+        if expected_count is not None and len(assessments) != expected_count:
+            item_warnings.append(
+                f"{item_title} expected {expected_count} questions from curriculum metadata "
+                f"but exported {len(assessments)}."
+            )
 
         warnings.extend(item_warnings)
         assessment_total += len(assessments)
@@ -73,6 +82,8 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
             {
                 "id": item_id,
                 "title": item_title,
+                "assessment_version": item_version,
+                "expected_assessment_count": expected_count,
                 "curriculum_item": item,
                 "assessments": assessments,
             }
@@ -90,9 +101,11 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
     json_path = output_dir / "practice-tests.json"
     markdown_path = output_dir / "practice-tests.md"
     html_path = output_dir / "practice-tests.html"
+    pdf_path = output_dir / "practice-tests.pdf"
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     markdown_path.write_text(_to_markdown(payload), encoding="utf-8")
     html_path.write_text(_to_html(payload), encoding="utf-8")
+    _to_pdf(payload, pdf_path)
 
     return PracticeExportResult(
         course_id=course_id,
@@ -101,6 +114,7 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
         output_json=json_path,
         output_markdown=markdown_path,
         output_html=html_path,
+        output_pdf=pdf_path,
         warnings=warnings,
     )
 
@@ -146,7 +160,16 @@ def _discover_course(session: requests.Session, course_url: str) -> tuple[str | 
             r"/courses/(\d+)/subscriber-curriculum-items",
         ],
     )
-    title = _first_match(text, [r'"title"\s*:\s*"([^"]{2,180})"', r"<title>([^<]{2,180})</title>"])
+    title = _first_match(
+        text,
+        [
+            r"<meta[^>]+property=[\"']og:title[\"'][^>]+content=[\"']([^\"']{2,180})[\"']",
+            r"<meta[^>]+content=[\"']([^\"']{2,180})[\"'][^>]+property=[\"']og:title[\"']",
+            r"<title>([^<]{2,180})</title>",
+            r'"course_title"\s*:\s*"([^"]{2,180})"',
+            r'"title"\s*:\s*"([^"]{2,180})"',
+        ],
+    )
     return course_id, _clean_text(title) if title else None, warnings
 
 
@@ -159,8 +182,8 @@ def _fetch_curriculum(
         "fields[asset]": "title,asset_type",
         "fields[chapter]": "title,object_index",
         "fields[lecture]": "title,object_index,asset",
-        "fields[practice]": "title,object_index",
-        "fields[quiz]": "title,object_index,type",
+        "fields[practice]": "id,title,object_index,num_assessments,version,duration,pass_percent,description,is_draft,changelog",
+        "fields[quiz]": "id,title,object_index,type,num_assessments,version,duration,pass_percent,description,is_draft,changelog",
     }
     legacy_params = {
         "page_size": "200",
@@ -184,15 +207,16 @@ def _fetch_curriculum(
 
 
 def _fetch_assessments(
-    session: requests.Session, course_url: str, quiz_id: str
+    session: requests.Session, course_url: str, quiz_id: str, version: int | None = None
 ) -> tuple[list[dict[str, Any]], list[str]]:
     host = _base_url(course_url)
     params = {
         "page_size": "250",
-        "version": "1",
         "fields[assessment]": "@all",
         "fields[answer]": "@all",
     }
+    if version is not None:
+        params["version"] = str(version)
     endpoints = [
         f"{host}/api-2.0/quizzes/{quiz_id}/assessments/",
         f"{host}/api-2.0/practice-tests/{quiz_id}/assessments/",
@@ -297,6 +321,60 @@ def _item_title(item: dict[str, Any]) -> str:
     return f"Practice test {str(_item_id(item) or 'unknown')}"
 
 
+def _item_version(item: dict[str, Any]) -> int | None:
+    return _int_or_none(_nested_item_value(item, ("version",)))
+
+
+def _item_expected_count(item: dict[str, Any]) -> int | None:
+    return _int_or_none(
+        _nested_item_value(item, ("num_assessments", "assessment_count", "num_questions", "question_count"))
+    )
+
+
+def _test_meta_text(test: dict[str, Any]) -> str:
+    parts = [_test_question_count_text(test)]
+    version = _int_or_none(test.get("assessment_version"))
+    if version is not None:
+        parts.append(f"Version: {version}")
+    return " | ".join(part for part in parts if part)
+
+
+def _test_heading(test: dict[str, Any]) -> str:
+    title = _clean_text(str(test.get("title") or "Practice test"))
+    details = _test_meta_text(test).replace(" | ", ", ")
+    return f"{title} ({details})" if details else title
+
+
+def _test_question_count_text(test: dict[str, Any]) -> str:
+    actual = len(test.get("assessments") or [])
+    expected = _int_or_none(test.get("expected_assessment_count"))
+    if expected is None or expected == actual:
+        return f"Questions: {actual}"
+    return f"Questions: {actual} of {expected}"
+
+
+def _nested_item_value(item: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        if item.get(key) not in (None, ""):
+            return item[key]
+    for nested_key in ("quiz", "practice", "asset"):
+        nested = item.get(nested_key)
+        if isinstance(nested, dict):
+            for key in keys:
+                if nested.get(key) not in (None, ""):
+                    return nested[key]
+    return None
+
+
+def _int_or_none(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _to_markdown(payload: dict[str, Any]) -> str:
     lines = [
         "# Practice Tests",
@@ -320,6 +398,9 @@ def _to_markdown(payload: dict[str, Any]) -> str:
 
     for test in tests:
         lines.extend([f"## {_clean_text(str(test.get('title') or 'Practice test'))}", ""])
+        meta_text = _test_meta_text(test)
+        if meta_text:
+            lines.extend([meta_text, ""])
         assessments = test.get("assessments") or []
         if not assessments:
             lines.extend(["No questions were available from the authenticated endpoint.", ""])
@@ -330,12 +411,12 @@ def _to_markdown(payload: dict[str, Any]) -> str:
             lines.extend([f"### {index}. {prompt or 'Question'}", ""])
             answers = _assessment_answers(assessment)
             if answers:
-                lines.extend(f"- {_clean_text(answer)}" for answer in answers)
+                lines.extend(f"- {_answer_label(answer_index)}. {_clean_text(answer)}" for answer_index, answer in enumerate(answers))
                 lines.append("")
             correct = assessment.get("correct_response") or assessment.get("correct_responses")
             if correct:
-                lines.extend([f"Correct response: `{_clean_text(str(correct))}`", ""])
-            explanation = _plain(assessment.get("explanation") or assessment.get("feedback"))
+                lines.extend([f"Correct response: `{_correct_response_text(correct)}`", ""])
+            explanation = _assessment_explanation(assessment)
             if explanation:
                 lines.extend([f"Explanation: {_clean_text(explanation)}", ""])
 
@@ -361,12 +442,15 @@ def _to_html(payload: dict[str, Any]) -> str:
             answers = _assessment_answers(assessment)
             answer_html = ""
             if answers:
-                answer_html = "<ol>{}</ol>".format(
-                    "".join(f"<li>{escape(_clean_text(answer))}</li>" for answer in answers)
+                answer_html = "<ul class=\"answers\">{}</ul>".format(
+                    "".join(
+                        f"<li><strong>{_answer_label(answer_index)}.</strong> {escape(_clean_text(answer))}</li>"
+                        for answer_index, answer in enumerate(answers)
+                    )
                 )
             correct = assessment.get("correct_response") or assessment.get("correct_responses")
-            correct_html = f"<p><strong>Correct:</strong> {escape(_clean_text(str(correct)))}</p>" if correct else ""
-            explanation = _plain(assessment.get("explanation") or assessment.get("feedback"))
+            correct_html = f"<p><strong>Correct:</strong> {escape(_correct_response_text(correct))}</p>" if correct else ""
+            explanation = _assessment_explanation(assessment)
             explanation_html = (
                 f"<p><strong>Explanation:</strong> {escape(_clean_text(explanation))}</p>" if explanation else ""
             )
@@ -375,9 +459,11 @@ def _to_html(payload: dict[str, Any]) -> str:
             )
 
         body = "".join(questions) if questions else "<p>No questions were available from the authenticated endpoint.</p>"
+        meta_text = _test_meta_text(test)
+        meta_html = f"<p class=\"meta\">{escape(meta_text)}</p>" if meta_text else ""
         test_sections.append(
-            "<section class=\"test\"><h2>{}</h2>{}</section>".format(
-                escape(_clean_text(str(test.get("title") or "Practice test"))), body
+            "<section class=\"test\"><h2>{}</h2>{}{}</section>".format(
+                escape(_clean_text(str(test.get("title") or "Practice test"))), meta_html, body
             )
         )
 
@@ -427,8 +513,12 @@ def _to_html(payload: dict[str, Any]) -> str:
         padding-top: 16px;
         margin-top: 16px;
       }}
-      ol {{
-        padding-left: 24px;
+      ul.answers {{
+        list-style: none;
+        padding-left: 0;
+      }}
+      ul.answers li {{
+        margin-bottom: 6px;
       }}
       code {{
         background: #f0ede6;
@@ -452,7 +542,163 @@ def _to_html(payload: dict[str, Any]) -> str:
 """
 
 
+def _to_pdf(payload: dict[str, Any], output_path: Path) -> None:
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
+    except ImportError as exc:  # pragma: no cover - covered by deployment dependency checks.
+        raise PracticeExportError("PDF export requires the reportlab package.") from exc
+
+    styles = getSampleStyleSheet()
+    normal = ParagraphStyle(
+        "PracticeNormal",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=9.5,
+        leading=13,
+        spaceAfter=6,
+    )
+    title_style = ParagraphStyle(
+        "PracticeTitle",
+        parent=styles["Title"],
+        alignment=TA_CENTER,
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=22,
+        spaceAfter=12,
+    )
+    meta_style = ParagraphStyle(
+        "PracticeMeta",
+        parent=normal,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor("#5f6368"),
+        fontSize=8.5,
+        leading=11,
+        spaceAfter=4,
+    )
+    section_style = ParagraphStyle(
+        "PracticeSection",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=13,
+        leading=16,
+        spaceBefore=12,
+        spaceAfter=8,
+        textColor=colors.HexColor("#0d5f59"),
+    )
+    question_style = ParagraphStyle(
+        "PracticeQuestion",
+        parent=normal,
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        leading=13.5,
+        spaceBefore=8,
+        spaceAfter=7,
+    )
+    answer_style = ParagraphStyle(
+        "PracticeAnswer",
+        parent=normal,
+        leftIndent=14,
+        firstLineIndent=-14,
+        spaceAfter=4,
+    )
+    correct_style = ParagraphStyle(
+        "PracticeCorrect",
+        parent=normal,
+        textColor=colors.HexColor("#075b55"),
+        fontName="Helvetica-Bold",
+        spaceBefore=4,
+    )
+    explanation_style = ParagraphStyle(
+        "PracticeExplanation",
+        parent=normal,
+        textColor=colors.HexColor("#424242"),
+        leftIndent=8,
+        borderColor=colors.HexColor("#d9d3c7"),
+        borderWidth=0.5,
+        borderPadding=6,
+        backColor=colors.HexColor("#f7f4ee"),
+        spaceBefore=4,
+        spaceAfter=8,
+    )
+    warning_style = ParagraphStyle(
+        "PracticeWarning",
+        parent=normal,
+        textColor=colors.HexColor("#8a4b00"),
+    )
+
+    story: list[Any] = []
+    course_title = _clean_text(str(payload.get("course_title") or "Practice Tests"))
+    story.append(Paragraph(_pdf_escape(course_title), title_style))
+    story.append(Paragraph(f"Course ID: {_pdf_escape(str(payload.get('course_id') or 'Unknown'))}", meta_style))
+    story.append(Paragraph(f"Source: {_pdf_escape(str(payload.get('course_url') or ''))}", meta_style))
+    story.append(Paragraph(f"Exported: {_pdf_escape(str(payload.get('exported_at') or ''))}", meta_style))
+    story.append(Spacer(1, 0.16 * inch))
+
+    warnings = payload.get("warnings") or []
+    if warnings:
+        story.append(Paragraph("Warnings", section_style))
+        for warning in warnings:
+            story.append(Paragraph(f"- {_pdf_escape(_clean_text(str(warning)))}", warning_style))
+
+    tests = payload.get("practice_tests") or []
+    if not tests:
+        story.append(Paragraph("No practice tests or quizzes were exported.", normal))
+    for test_index, test in enumerate(tests):
+        if test_index:
+            story.append(PageBreak())
+        assessments = test.get("assessments") or []
+        heading = _test_heading(test)
+        story.append(Paragraph(_pdf_escape(heading), section_style))
+        if not assessments:
+            story.append(Paragraph("No questions were available from the authenticated endpoint.", normal))
+            continue
+
+        for index, assessment in enumerate(assessments, start=1):
+            prompt = _assessment_prompt(assessment) or "Question"
+            story.append(Paragraph(f"{index}. {_pdf_escape(prompt)}", question_style))
+            for answer_index, answer in enumerate(_assessment_answers(assessment)):
+                answer_text = f"{_answer_label(answer_index)}. {_clean_text(answer)}"
+                story.append(Paragraph(_pdf_escape(answer_text), answer_style))
+            correct = assessment.get("correct_response") or assessment.get("correct_responses")
+            if correct:
+                story.append(Paragraph(f"Correct: {_pdf_escape(_correct_response_text(correct))}", correct_style))
+            explanation = _assessment_explanation(assessment)
+            if explanation:
+                story.append(Paragraph(f"<b>Explanation:</b> {_pdf_escape(_clean_text(explanation))}", explanation_style))
+
+    def add_page_number(canvas, doc) -> None:
+        canvas.saveState()
+        canvas.setFont("Helvetica", 8)
+        canvas.setFillColor(colors.HexColor("#67645c"))
+        canvas.drawRightString(doc.pagesize[0] - doc.rightMargin, 0.38 * inch, f"Page {doc.page}")
+        canvas.restoreState()
+
+    doc = SimpleDocTemplate(
+        str(output_path),
+        pagesize=letter,
+        rightMargin=0.55 * inch,
+        leftMargin=0.55 * inch,
+        topMargin=0.55 * inch,
+        bottomMargin=0.55 * inch,
+        title=course_title,
+        author="Local Media Downloader",
+    )
+    doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
+
+
 def _assessment_prompt(assessment: dict[str, Any]) -> str:
+    prompt = _assessment_prompt_data(assessment)
+    if prompt:
+        for key in ("question", "prompt", "title", "body", "text", "plain_text", "html"):
+            text = _plain(prompt.get(key))
+            if text:
+                return _clean_text(text)
+
     for key in ("prompt", "question", "title", "body"):
         text = _plain(assessment.get(key))
         if text:
@@ -461,7 +707,15 @@ def _assessment_prompt(assessment: dict[str, Any]) -> str:
 
 
 def _assessment_answers(assessment: dict[str, Any]) -> list[str]:
-    raw = assessment.get("answers") or assessment.get("response_options") or assessment.get("answer")
+    prompt = _assessment_prompt_data(assessment)
+    raw = (
+        prompt.get("answers")
+        or prompt.get("response_options")
+        or prompt.get("answer")
+        or assessment.get("answers")
+        or assessment.get("response_options")
+        or assessment.get("answer")
+    )
     if isinstance(raw, list):
         answers = []
         for item in raw:
@@ -478,6 +732,46 @@ def _assessment_answers(assessment: dict[str, Any]) -> list[str]:
         return answers
     text = _plain(raw)
     return [text] if text else []
+
+
+def _assessment_explanation(assessment: dict[str, Any]) -> str:
+    prompt = _assessment_prompt_data(assessment)
+    for source in (prompt, assessment):
+        for key in ("explanation", "feedback", "rationale", "solution"):
+            text = _plain(source.get(key))
+            if text:
+                return _clean_text(text)
+    return ""
+
+
+def _assessment_prompt_data(assessment: dict[str, Any]) -> dict[str, Any]:
+    prompt = assessment.get("prompt")
+    return prompt if isinstance(prompt, dict) else {}
+
+
+def _correct_response_text(value: Any) -> str:
+    if isinstance(value, list):
+        values = value
+    elif isinstance(value, tuple):
+        values = list(value)
+    else:
+        values = [value]
+
+    labels: list[str] = []
+    for item in values:
+        text = _clean_text(_plain(item))
+        if len(text) == 1 and text.isalpha():
+            labels.append(text.upper())
+        else:
+            labels.append(text)
+    return ", ".join(label for label in labels if label)
+
+
+def _answer_label(index: int) -> str:
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    if index < len(alphabet):
+        return alphabet[index]
+    return str(index + 1)
 
 
 def _plain(value: Any) -> str:
@@ -500,9 +794,14 @@ def _plain(value: Any) -> str:
 
 
 def _clean_text(value: str) -> str:
-    text = re.sub(r"<[^>]+>", " ", value)
+    text = unescape(value)
+    text = re.sub(r"<[^>]+>", " ", text)
     text = text.replace("\\n", " ").replace("\\u002F", "/")
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _pdf_escape(value: str) -> str:
+    return escape(_clean_text(value), quote=False).replace("\n", "<br/>")
 
 
 def _first_match(text: str, patterns: list[str]) -> str | None:

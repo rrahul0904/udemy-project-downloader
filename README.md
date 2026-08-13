@@ -37,7 +37,7 @@ Keep browser cookies private. The app stores a temporary cookie file only for th
 
 - Media exposed to `yt-dlp` for the submitted Udemy or YouTube URL.
 - Subtitles, descriptions, thumbnails, and metadata where available.
-- Practice tests and quizzes as JSON, Markdown, and local HTML when Udemy exposes them to your authenticated session through normal JSON endpoints.
+- Practice tests and quizzes as JSON, Markdown, local HTML, and PDF when Udemy exposes them to your authenticated session through normal JSON endpoints.
 
 ## Reference Notes
 
