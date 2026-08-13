@@ -7,8 +7,11 @@ from app.practice_tests import (
     _assessment_answers,
     _assessment_explanation,
     _assessment_prompt,
+    _friendly_course_prefix,
+    _friendly_test_title,
     _item_expected_count,
     _item_version,
+    _slugify_file_stem,
     _to_markdown,
     _to_pdf,
 )
@@ -59,6 +62,23 @@ class PracticeTestFormattingTests(unittest.TestCase):
 
         self.assertEqual(_item_version(item), 55)
         self.assertEqual(_item_expected_count(item), 121)
+
+    def test_friendly_set_name_from_course_title(self):
+        prefix = _friendly_course_prefix(
+            "5 Practice Exams COF-C02 Snowflake Core Certification",
+            "https://www.udemy.com/course/5-practice-exams-cof-c02-snowflake-core-certification/learn/quiz/6868763",
+        )
+
+        self.assertEqual(prefix, "Snowflake Core Certification")
+        self.assertEqual(_friendly_test_title(prefix, "Practice Exam 1", 1), "Snowflake Core Certification Set 1")
+        self.assertEqual(_slugify_file_stem("Snowflake Core Certification Set 1"), "snowflake-core-certification-set-1")
+        self.assertEqual(
+            _friendly_course_prefix(
+                None,
+                "https://www.udemy.com/course/5-practice-exams-cof-c02-snowflake-core-certification/learn/quiz/6868763",
+            ),
+            "Snowflake Core Certification",
+        )
 
     def test_pdf_export_writes_file(self):
         payload = {

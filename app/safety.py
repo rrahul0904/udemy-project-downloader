@@ -72,6 +72,9 @@ def slug_from_url(value: str) -> str:
             candidate = query["list"][0]
         else:
             candidate = "youtube"
+    elif _is_udemy_host(host) and "course" in parts:
+        index = parts.index("course")
+        candidate = parts[index + 1] if len(parts) > index + 1 else "udemy-course"
     else:
         candidate = parts[-1] if parts else parsed.hostname or "course"
 

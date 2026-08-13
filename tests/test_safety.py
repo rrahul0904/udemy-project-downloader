@@ -47,6 +47,10 @@ class SafetyTests(unittest.TestCase):
 
     def test_slug_from_url(self):
         self.assertEqual(slug_from_url("https://www.udemy.com/course/python-101/"), "python-101")
+        self.assertEqual(
+            slug_from_url("https://www.udemy.com/course/python-101/learn/quiz/123#overview"),
+            "python-101",
+        )
         self.assertEqual(slug_from_url("https://www.youtube.com/watch?v=abc123"), "abc123")
         self.assertEqual(slug_from_url("https://www.youtube.com/playlist?list=PLabc"), "PLabc")
 

@@ -33,6 +33,7 @@ class PracticeExportResult:
     output_markdown: Path
     output_html: Path
     output_pdf: Path
+    output_set_pdfs: list[Path]
     warnings: list[str]
 
 
@@ -58,9 +59,12 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
 
     exported_tests: list[dict[str, Any]] = []
     assessment_total = 0
+    course_prefix = _friendly_course_prefix(title, course_url)
     for item in practice_items:
         item_id = _item_id(item)
         item_title = _item_title(item)
+        set_index = len(exported_tests) + 1
+        display_title = _friendly_test_title(course_prefix, item_title, set_index)
         item_version = _item_version(item)
         expected_count = _item_expected_count(item)
         assessments: list[dict[str, Any]] = []
@@ -68,11 +72,11 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
         if item_id:
             assessments, item_warnings = _fetch_assessments(session, course_url, str(item_id), item_version)
         else:
-            item_warnings.append(f"Could not determine a quiz id for '{item_title}'.")
+            item_warnings.append(f"Could not determine a quiz id for '{display_title}'.")
 
         if expected_count is not None and len(assessments) != expected_count:
             item_warnings.append(
-                f"{item_title} expected {expected_count} questions from curriculum metadata "
+                f"{display_title} expected {expected_count} questions from curriculum metadata "
                 f"but exported {len(assessments)}."
             )
 
@@ -81,7 +85,9 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
         exported_tests.append(
             {
                 "id": item_id,
-                "title": item_title,
+                "title": display_title,
+                "original_title": item_title,
+                "set_index": set_index,
                 "assessment_version": item_version,
                 "expected_assessment_count": expected_count,
                 "curriculum_item": item,
@@ -94,18 +100,21 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
         "course_url": course_url,
         "course_id": course_id,
         "course_title": title,
+        "practice_set_prefix": course_prefix,
         "practice_tests": exported_tests,
         "warnings": warnings,
     }
 
-    json_path = output_dir / "practice-tests.json"
-    markdown_path = output_dir / "practice-tests.md"
-    html_path = output_dir / "practice-tests.html"
-    pdf_path = output_dir / "practice-tests.pdf"
+    file_stem = f"{_slugify_file_stem(course_prefix)}-practice-tests"
+    json_path = output_dir / f"{file_stem}.json"
+    markdown_path = output_dir / f"{file_stem}.md"
+    html_path = output_dir / f"{file_stem}.html"
+    pdf_path = output_dir / f"{file_stem}.pdf"
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     markdown_path.write_text(_to_markdown(payload), encoding="utf-8")
     html_path.write_text(_to_html(payload), encoding="utf-8")
     _to_pdf(payload, pdf_path)
+    set_pdf_paths = _write_set_pdfs(payload, output_dir)
 
     return PracticeExportResult(
         course_id=course_id,
@@ -115,6 +124,7 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
         output_markdown=markdown_path,
         output_html=html_path,
         output_pdf=pdf_path,
+        output_set_pdfs=set_pdf_paths,
         warnings=warnings,
     )
 
@@ -373,6 +383,73 @@ def _int_or_none(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _friendly_course_prefix(course_title: str | None, course_url: str) -> str:
+    raw = course_title or _title_from_slug(_udemy_course_slug(course_url)) or "Practice Tests"
+    text = _clean_text(str(raw).replace("-", " ").replace("_", " "))
+    text = re.sub(r"\s*\|\s*Udemy.*$", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^\s*\d+\s+", "", text)
+    text = re.sub(r"\bCOF\s*-?\s*C0?2\b", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bpractice\s+(exams?|tests?)\b", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bmock\s+(exams?|tests?)\b", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(exam|test)\s+questions?\b", " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bquestion\s+bank\b", " ", text, flags=re.IGNORECASE)
+    text = _clean_text(text)
+    return text or "Practice Tests"
+
+
+def _friendly_test_title(course_prefix: str, original_title: str, set_index: int) -> str:
+    original = _clean_text(original_title)
+    number = _first_int(original) or set_index
+    generic = re.sub(r"\d+", "", original).strip().lower()
+    generic = re.sub(r"\s+", " ", generic)
+    if generic in {"practice", "practice exam", "practice test", "exam", "test"}:
+        return f"{course_prefix} Set {number}"
+    if original.lower().startswith(course_prefix.lower()):
+        return original
+    return f"{course_prefix} Set {number}" if number else original
+
+
+def _first_int(value: str) -> int | None:
+    match = re.search(r"\d+", value)
+    return int(match.group(0)) if match else None
+
+
+def _slugify_file_stem(value: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9]+", "-", _clean_text(value).lower())
+    safe = "-".join(part for part in safe.split("-") if part)
+    return safe[:90] or "practice-tests"
+
+
+def _udemy_course_slug(course_url: str) -> str | None:
+    parsed = urlparse(course_url)
+    parts = [part for part in parsed.path.split("/") if part]
+    if "course" not in parts:
+        return None
+    index = parts.index("course")
+    return parts[index + 1] if len(parts) > index + 1 else None
+
+
+def _title_from_slug(value: str | None) -> str | None:
+    if not value:
+        return None
+    return " ".join(part.capitalize() for part in re.split(r"[-_\s]+", value) if part)
+
+
+def _write_set_pdfs(payload: dict[str, Any], output_dir: Path) -> list[Path]:
+    paths: list[Path] = []
+    for test in payload.get("practice_tests") or []:
+        title = _clean_text(str(test.get("title") or "Practice set"))
+        set_payload = {
+            **payload,
+            "practice_tests": [test],
+            "warnings": [],
+        }
+        path = output_dir / f"{_slugify_file_stem(title)}.pdf"
+        _to_pdf(set_payload, path)
+        paths.append(path)
+    return paths
 
 
 def _to_markdown(payload: dict[str, Any]) -> str:

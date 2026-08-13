@@ -277,8 +277,10 @@ class JobManager:
         )
         job.add_log(f"Practice test files written to {practice_dir}.")
         job.add_log(f"Practice test PDF ready: {result.output_pdf.name}.")
+        if result.output_set_pdfs:
+            job.add_log(f"Practice set PDFs ready: {len(result.output_set_pdfs)} file(s).")
         if result.warnings:
-            job.add_log(f"Practice export warnings: {len(result.warnings)}. See practice-tests.html.")
+            job.add_log(f"Practice export warnings: {len(result.warnings)}. See {result.output_html.name}.")
 
     @staticmethod
     def _format_selector(quality: str) -> str | None:
