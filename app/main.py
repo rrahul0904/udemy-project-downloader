@@ -29,6 +29,11 @@ async def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/lab")
+async def study_lab() -> FileResponse:
+    return FileResponse(STATIC_DIR / "lab.html")
+
+
 @app.get("/api/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
