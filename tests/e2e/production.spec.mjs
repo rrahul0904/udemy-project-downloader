@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('primary product surfaces load and navigate', async ({ page }) => {
+test('primary product surfaces load and navigate in every direction', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Course Intelligence' })).toBeVisible();
@@ -9,10 +9,23 @@ test('primary product surfaces load and navigate', async ({ page }) => {
   await page.getByRole('link', { name: 'Course Intelligence' }).click();
   await expect(page).toHaveURL(/\/learn$/);
   await expect(page.getByRole('heading', { name: /searchable study workspace/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Downloader' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Study Lab' })).toBeVisible();
 
+  await page.getByRole('link', { name: 'Downloader' }).click();
+  await expect(page).toHaveURL(/\/$/);
   await page.getByRole('link', { name: 'Study Lab' }).click();
   await expect(page).toHaveURL(/\/lab$/);
   await expect(page.getByText('Statistics Calculator', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Downloader' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Course Intelligence' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Course Intelligence' }).click();
+  await expect(page).toHaveURL(/\/learn$/);
+  await page.getByRole('link', { name: 'Study Lab' }).click();
+  await expect(page).toHaveURL(/\/lab$/);
+  await page.getByRole('link', { name: 'Downloader' }).click();
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test('course intelligence persists notes and bookmarks and searches FTS', async ({ page }) => {
