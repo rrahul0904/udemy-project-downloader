@@ -1,0 +1,11 @@
+{
+  "id": "fixture-introduction",
+  "title": "Introduction",
+  "playlist_title": "Production Test Course",
+  "playlist_index": 1,
+  "webpage_url": "https://www.youtube.com/watch?v=fixture-introduction",
+  "extractor_key": "Youtube",
+  "duration": 14,
+  "uploader": "Fixture Instructor",
+  "thumbnail": "https://example.invalid/fixture.jpg"
+}
