@@ -18,8 +18,8 @@ class ProductionCourseStoreTests(unittest.TestCase):
         self.data = root / "data"
         target = self.downloads / "TestCourse"
         target.mkdir(parents=True)
-        for source in FIXTURE.iterdir():
-            shutil.copy2(source, target / source.name)
+        for name in ("001 Introduction.en.vtt", "001 Introduction.info.json"):
+            shutil.copy2(FIXTURE / name, target / name)
         self.store = CourseStore(self.data / "app.db")
 
     def tearDown(self):
