@@ -1,6 +1,6 @@
 # Local Media Downloader
 
-A Docker-hosted local web console for archiving supported Udemy and YouTube media to your machine, with an integrated local-first Study Lab for working with downloaded course material.
+A Docker-hosted local web console for archiving supported Udemy and YouTube media to your machine, with an integrated local-first Course Intelligence workspace and Study Lab for learning from downloaded course material.
 
 This project is for content you own, created, or are otherwise authorized to access and archive for local personal use. It does not bypass DRM, paywalls, account restrictions, or access controls. Udemy practice-test export depends on authenticated Udemy JSON endpoints that may change or be unavailable for some courses.
 
@@ -13,6 +13,22 @@ docker compose up --build
 Open [http://127.0.0.1:8080](http://127.0.0.1:8080).
 
 Downloaded files are written to `./downloads`. Runtime data is written to `./data`.
+
+## Course Intelligence
+
+Open [http://127.0.0.1:8080/learn](http://127.0.0.1:8080/learn), or use the **Course Intelligence** button in the downloader.
+
+Course Intelligence is the transcript-backed learning layer above the downloader. The first implementation:
+
+- scans compatible downloaded transcripts and groups them into local course/lesson views;
+- parses VTT, SRT, JSON3, TXT and Markdown transcripts;
+- preserves timestamps and matches nearby local media when possible;
+- provides transcript search and timestamp navigation;
+- stores per-lesson personal notes and bookmarks locally in the browser;
+- exports personal notes as Markdown;
+- keeps transcript files behind the existing guarded local file model.
+
+This is the foundation for cited notes, flashcards, quizzes, concept maps, grounded course chat, spaced repetition, course-wide search and API/MCP access. See [`docs/YOUTUBE_TRANSCRIPT_DEV_REVERSE_ENGINEERING.md`](docs/YOUTUBE_TRANSCRIPT_DEV_REVERSE_ENGINEERING.md) for the reverse-engineering analysis, target domain model and implementation waves.
 
 ## Study Lab
 
@@ -61,9 +77,13 @@ I checked the two linked downloader projects. Both are MIT-licensed and both inc
 
 The Study Lab design/tool inventory was also informed by the MIT-licensed STEMKit project (`LD-Shell/stemkit`; the originally supplied `danielravina/stemkit` URL resolves to that project). This repository currently uses an independent implementation rather than vendoring STEMKit's source tree or dependency bundles. See `docs/STUDY_LAB.md` for details.
 
+The Course Intelligence direction was informed by public product behavior and documentation from YouTubeTranscript.dev. This repository does not copy that product's source code or claim knowledge of non-public implementation details.
+
 ## Local Checks
 
 ```bash
 python3 -m unittest discover -s tests
 python3 -m compileall app
+node --check app/static/lab.js
+node --check app/static/learn.js
 ```
