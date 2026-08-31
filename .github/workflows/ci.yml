@@ -31,5 +31,7 @@ jobs:
       - name: Compile Python application
         run: python -m compileall -q app
 
-      - name: Validate Study Lab JavaScript syntax
-        run: node --check app/static/lab.js
+      - name: Validate browser JavaScript syntax
+        run: |
+          node --check app/static/lab.js
+          node --check app/static/learn.js
