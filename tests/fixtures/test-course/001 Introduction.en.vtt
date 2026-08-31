@@ -1,0 +1,10 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:04.000
+Welcome to the production Course Intelligence fixture.
+
+00:00:04.000 --> 00:00:09.000
+This lesson explains durable transcript search with SQLite FTS5.
+
+00:00:09.000 --> 00:00:14.000
+Bookmarks and notes should survive an application restart.

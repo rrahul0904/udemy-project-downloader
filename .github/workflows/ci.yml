@@ -4,8 +4,15 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -25,13 +32,33 @@ jobs:
       - name: Install Python dependencies
         run: python -m pip install --upgrade pip && pip install -r requirements.txt
 
-      - name: Run Python tests
-        run: python -m unittest discover -s tests -v
+      - name: Verify dependency graph
+        run: python -m pip check
 
-      - name: Compile Python application
-        run: python -m compileall -q app
+      - name: Run canonical verification
+        run: bash scripts/verify.sh
 
-      - name: Validate browser JavaScript syntax
-        run: |
-          node --check app/static/lab.js
-          node --check app/static/learn.js
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install application
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+      - name: Install browser test dependencies
+        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Run browser smoke tests
+        run: npm run test:e2e
+
+  container-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -t course-intelligence:${{ github.sha }} .

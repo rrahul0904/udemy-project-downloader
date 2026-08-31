@@ -1,89 +1,153 @@
-# Local Media Downloader
+# Course Intelligence
 
-A Docker-hosted local web console for archiving supported Udemy and YouTube media to your machine, with an integrated local-first Course Intelligence workspace and Study Lab for learning from downloaded course material.
+A local-first, Docker-hosted learning workspace that combines an authorized Udemy/YouTube media downloader, durable transcript intelligence, and a 21-tool Study Lab.
 
-This project is for content you own, created, or are otherwise authorized to access and archive for local personal use. It does not bypass DRM, paywalls, account restrictions, or access controls. Udemy practice-test export depends on authenticated Udemy JSON endpoints that may change or be unavailable for some courses.
+This project is for content you own, created, or are otherwise authorized to access and archive for personal use. It does **not** bypass DRM, paywalls, account restrictions, or access controls.
 
-## Run
+## Product surfaces
+
+| Route | Surface | Purpose |
+| --- | --- | --- |
+| `/` | Downloader | Archive supported authorized Udemy/YouTube media, subtitles, metadata, thumbnails and available Udemy practice tests. |
+| `/learn` | Course Intelligence | Organize archived transcripts into courses/lessons, search them, navigate timestamps, and persist notes/bookmarks. |
+| `/lab` | Study Lab | Use 21 local data, scientific, citation, molecular and study utilities with compatible downloaded files. |
+
+## Local run
 
 ```bash
+cp .env.example .env
 docker compose up --build
 ```
 
-Open [http://127.0.0.1:8080](http://127.0.0.1:8080).
+Open `http://127.0.0.1:8080`.
 
-Downloaded files are written to `./downloads`. Runtime data is written to `./data`.
+Persistent local data:
+
+```text
+./downloads  -> archived course/media material
+./data       -> SQLite database + durable job history
+```
 
 ## Course Intelligence
 
-Open [http://127.0.0.1:8080/learn](http://127.0.0.1:8080/learn), or use the **Course Intelligence** button in the downloader.
+Course Intelligence uses SQLite as its durable local source of truth. On library refresh it idempotently ingests compatible downloaded transcripts and available `.info.json` metadata.
 
-Course Intelligence is the transcript-backed learning layer above the downloader. The first implementation:
+Supported transcript inputs:
 
-- scans compatible downloaded transcripts and groups them into local course/lesson views;
-- parses VTT, SRT, JSON3, TXT and Markdown transcripts;
-- preserves timestamps and matches nearby local media when possible;
-- provides transcript search and timestamp navigation;
-- stores per-lesson personal notes and bookmarks locally in the browser;
-- exports personal notes as Markdown;
-- keeps transcript files behind the existing guarded local file model.
+- VTT
+- SRT
+- JSON3
+- TXT
+- Markdown
 
-This is the foundation for cited notes, flashcards, quizzes, concept maps, grounded course chat, spaced repetition, course-wide search and API/MCP access. See [`docs/YOUTUBE_TRANSCRIPT_DEV_REVERSE_ENGINEERING.md`](docs/YOUTUBE_TRANSCRIPT_DEV_REVERSE_ENGINEERING.md) for the reverse-engineering analysis, target domain model and implementation waves.
+The data model includes courses, sections, lessons, transcripts, transcript segments, notes, bookmarks, study progress and schema migrations. Transcript segments are indexed with SQLite FTS5 for lesson-, course- and library-wide search.
+
+Notes and bookmarks are server-side durable state; they survive browser refreshes and application restarts. Timestamped search/bookmark results link back to the relevant lesson moment when matching local media exists.
+
+The larger product direction—cited AI notes, flashcards, quizzes, concept maps, grounded tutor, spaced repetition and MCP/API access—is documented in `docs/YOUTUBE_TRANSCRIPT_DEV_REVERSE_ENGINEERING.md` and intentionally remains outside the production-closeout wave.
 
 ## Study Lab
 
-Open [http://127.0.0.1:8080/lab](http://127.0.0.1:8080/lab), or use the **Study Lab** button in the downloader.
+Study Lab remains an additive local-first workbench with 21 lightweight tools spanning:
 
-Study Lab is a STEMKit-inspired, local-first course/research workbench integrated into this same FastAPI application. It currently includes 21 lightweight tools spanning:
-
-- data cleaning, descriptive statistics, outlier detection, linear fitting, error bars, plotting, and manual plot digitization;
-- XVG parsing, PDB inspection/coordinate translation, and starter molecular-dynamics workflows;
-- BibTeX cleanup/deduplication, DOI → BibTeX, journal abbreviation, LaTeX tables, and equation snippets;
+- data cleaning, descriptive statistics, outlier detection, linear fitting, error bars, plotting and plot digitization;
+- XVG parsing, PDB inspection/coordinate translation and starter molecular-dynamics workflows;
+- BibTeX cleanup/deduplication, DOI → BibTeX, journal abbreviation, LaTeX tables and equation snippets;
 - scientific unit conversion;
-- Pomodoro, decision-matrix, and first-order kinetics study helpers.
+- Pomodoro, decision-matrix and first-order kinetics helpers.
 
-Compatible text/data files already present in the local downloads folder can be loaded into the active Study Lab tool through the existing guarded `/files/{relative_path}` route. Most Study Lab computations run entirely in browser JavaScript. DOI → BibTeX intentionally calls Crossref only after an explicit user action.
+Compatible files under the download store are loaded through the existing guarded `/files/{relative_path}` route. Most Study Lab computations run entirely in browser JavaScript. DOI → BibTeX reaches Crossref only after explicit user action.
 
-The first integration is a functional MVP, not a claim of exact scientific/numerical parity with STEMKit. See [`docs/STUDY_LAB.md`](docs/STUDY_LAB.md) for the architecture, attribution, current parity matrix, and recommended production follow-up.
+Study Lab is a learning/research helper, not a claim of publication-grade numerical parity. See `docs/STUDY_LAB.md`.
 
-## Supported URLs
+## Downloader
 
-- Udemy course URLs such as `https://www.udemy.com/course/example/`.
-- YouTube video URLs such as `https://www.youtube.com/watch?v=...`, `https://youtu.be/...`, Shorts, live URLs, and explicit playlist URLs.
+Supported URL shapes include:
 
-YouTube channel-wide downloads are intentionally not enabled by the URL guard to avoid accidentally starting very large downloads.
+- Udemy course URLs;
+- YouTube video URLs, Shorts and live URLs;
+- explicit YouTube playlist URLs.
 
-## Authentication
+YouTube channel-wide downloads remain intentionally disabled by the URL guard to avoid accidental bulk jobs.
 
-The app supports three authentication modes:
+The downloader uses bounded concurrency, durable job history, cancellation, explicit restart semantics, a download archive, bounded log history, optional per-file size limits, disk-space checks and temporary cookie cleanup.
 
-- No cookies: best for public YouTube videos.
-- Local browser session: for the app running directly on your Mac. It asks `yt-dlp` to read cookies from Chrome, Safari, Firefox, Brave, Edge, Chromium, Vivaldi, or Opera.
-- `cookies.txt` upload: best for Docker or restricted content. The app accepts a Netscape-format `cookies.txt` exported from your own signed-in browser session.
+### Source authentication
 
-Udemy downloads require either a local browser session or `cookies.txt`. Private, age-restricted, or members-only YouTube videos may also require cookies from an authorized account.
+The downloader supports:
 
-Keep browser cookies private. The app stores a temporary cookie file only for the lifetime of the job and deletes its copy afterward.
+- no source cookies for public YouTube;
+- local browser cookies when the app is running directly on a compatible local machine;
+- temporary Netscape-format `cookies.txt` upload for an authorized user/session.
 
-## What It Downloads
+Udemy downloads require an authorized browser session or cookies file. Private/restricted YouTube content likewise requires normal account authorization. Uploaded cookie material is temporary and is removed after the job; stale app cookie files are removed at startup.
 
-- Media exposed to `yt-dlp` for the submitted Udemy or YouTube URL.
-- Subtitles, descriptions, thumbnails, and metadata where available.
-- Practice tests and quizzes as JSON, Markdown, local HTML, and PDF when Udemy exposes them to your authenticated session through normal JSON endpoints.
+## Production security boundary
 
-## Reference Notes
+The first production release is deliberately a **private/personal application**, not an anonymous public downloader.
 
-I checked the two linked downloader projects. Both are MIT-licensed and both include DRM/Widevine-oriented paths; this app intentionally does not implement those pieces. The useful compatible idea adopted here is the normal quiz-assessment endpoint shape and local practice-test export.
+When `APP_ENV=production`:
 
-The Study Lab design/tool inventory was also informed by the MIT-licensed STEMKit project (`LD-Shell/stemkit`; the originally supplied `danielravina/stemkit` URL resolves to that project). This repository currently uses an independent implementation rather than vendoring STEMKit's source tree or dependency bundles. See `docs/STUDY_LAB.md` for details.
+- `APP_USER` and `APP_PASSWORD` are required at startup;
+- all product and sensitive API routes require HTTP Basic authentication;
+- `/api/health` remains minimal and public for platform liveness;
+- state-changing cross-origin requests are rejected;
+- security headers/CSP are enabled;
+- job creation is rate-limited;
+- upload and query sizes are bounded;
+- absolute storage paths are not exposed by the production download inventory.
 
-The Course Intelligence direction was informed by public product behavior and documentation from YouTubeTranscript.dev. This repository does not copy that product's source code or claim knowledge of non-public implementation details.
+Always terminate TLS/HTTPS in front of the container. Do not use Basic authentication over plaintext HTTP.
 
-## Local Checks
+## Production runtime
+
+The application requires more than a static/serverless web deployment. A complete production host must support:
+
+- Docker or equivalent long-running Python runtime;
+- FFmpeg;
+- `yt-dlp` subprocesses;
+- persistent `/downloads` storage;
+- persistent `/app/data` storage;
+- long-running download jobs;
+- HTTPS and environment-secret management.
+
+See `docs/PRODUCTION_DEPLOYMENT.md` for the exact runtime, persistence, backup, rollback and production acceptance requirements.
+
+## Health and readiness
+
+```text
+GET /api/health
+GET /api/readiness
+```
+
+`/api/health` is liveness-only. Authenticated `/api/readiness` verifies SQLite, writable persistent storage, FFmpeg and `yt-dlp` before the instance should receive traffic.
+
+## Verification
+
+Canonical checks:
 
 ```bash
-python3 -m unittest discover -s tests
-python3 -m compileall app
-node --check app/static/lab.js
-node --check app/static/learn.js
+bash scripts/verify.sh
 ```
+
+Browser E2E:
+
+```bash
+RUN_E2E=1 bash scripts/verify.sh
+```
+
+Docker build:
+
+```bash
+VERIFY_DOCKER=1 bash scripts/verify.sh
+```
+
+CI runs independent verification, Playwright browser smoke and production image build jobs.
+
+## Reference notes
+
+The downloader work was informed by public MIT-licensed downloader references, but DRM/Widevine-oriented paths were intentionally excluded.
+
+Study Lab's inventory was informed by the MIT-licensed STEMKit project (`LD-Shell/stemkit`) and independently implemented; see `docs/STUDY_LAB.md` for attribution and scope.
+
+Course Intelligence was informed by public product behavior/documentation from YouTubeTranscript.dev. This repository does not copy that product's source code or claim knowledge of non-public implementation details.

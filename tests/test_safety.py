@@ -45,6 +45,22 @@ class SafetyTests(unittest.TestCase):
         with self.assertRaises(UrlValidationError):
             normalize_udemy_url("www.udemy.com/course/x/")
 
+    def test_rejects_embedded_credentials(self):
+        with self.assertRaises(UrlValidationError):
+            normalize_supported_url("https://user:secret@www.youtube.com/watch?v=abc123")
+        with self.assertRaises(UrlValidationError):
+            normalize_supported_url("https://user:secret@www.udemy.com/course/python-101/")
+
+    def test_rejects_nonstandard_ports(self):
+        with self.assertRaises(UrlValidationError):
+            normalize_supported_url("https://www.youtube.com:8443/watch?v=abc123")
+        with self.assertRaises(UrlValidationError):
+            normalize_supported_url("https://www.udemy.com:9000/course/python-101/")
+
+    def test_normalization_drops_standard_ports(self):
+        normalized = normalize_supported_url("https://www.youtube.com:443/watch?v=abc123")
+        self.assertEqual(normalized.url, "https://www.youtube.com/watch?v=abc123")
+
     def test_slug_from_url(self):
         self.assertEqual(slug_from_url("https://www.udemy.com/course/python-101/"), "python-101")
         self.assertEqual(
