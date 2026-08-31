@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Course Intelligence · Local Media Downloader</title>
+    <link rel="stylesheet" href="/static/learn.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/learn">
+        <span class="brand-mark">CI</span>
+        <span><strong>Course Intelligence</strong><small>Local transcript-backed learning</small></span>
+      </a>
+      <nav aria-label="Primary">
+        <a href="/">Downloader</a>
+        <a href="/lab">Study Lab</a>
+        <a class="active" href="/learn" aria-current="page">Learning</a>
+      </nav>
+    </header>
+
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">COURSE → TRANSCRIPT → KNOWLEDGE</p>
+          <h1>Turn archived lessons into a searchable study workspace.</h1>
+          <p>
+            Course Intelligence discovers downloaded transcript files, groups them into courses,
+            connects matching local media, and gives every lesson a searchable, timestamp-aware workspace.
+          </p>
+        </div>
+        <div class="stats" aria-live="polite">
+          <div><strong id="course-count">0</strong><span>courses</span></div>
+          <div><strong id="lesson-count">0</strong><span>transcripts</span></div>
+          <div><strong>Local</strong><span>by default</span></div>
+        </div>
+      </section>
+
+      <section class="workspace-grid">
+        <aside class="library-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">LIBRARY</p><h2>Your courses</h2></div>
+            <button id="refresh-library" class="ghost" type="button">Refresh</button>
+          </div>
+          <label class="search"><span class="sr-only">Filter lessons</span><input id="lesson-filter" type="search" placeholder="Filter courses or lessons…" /></label>
+          <div id="library" class="library" aria-live="polite"><p class="muted">Scanning downloaded transcripts…</p></div>
+        </aside>
+
+        <section class="lesson-panel">
+          <div id="empty-state" class="empty-state">
+            <p class="eyebrow">SELECT A LESSON</p>
+            <h2>Your transcript becomes the source of truth.</h2>
+            <p>Choose any transcript in the library. Timestamped VTT, SRT and JSON3 files are parsed locally by the FastAPI app.</p>
+          </div>
+
+          <div id="lesson-workspace" hidden>
+            <div class="lesson-head">
+              <div><p class="eyebrow" id="lesson-course">COURSE</p><h2 id="lesson-title">Lesson</h2></div>
+              <div class="actions">
+                <button id="export-notes" class="ghost" type="button">Export notes</button>
+                <a id="open-media" class="button-link" href="#" hidden>Open media</a>
+              </div>
+            </div>
+
+            <div class="lesson-meta" id="lesson-meta"></div>
+
+            <div class="tabbar" role="tablist" aria-label="Lesson tools">
+              <button class="tab active" data-tab="transcript" role="tab">Transcript</button>
+              <button class="tab" data-tab="notes" role="tab">Notes</button>
+              <button class="tab" data-tab="bookmarks" role="tab">Bookmarks</button>
+            </div>
+
+            <section id="tab-transcript" class="tab-panel">
+              <div class="transcript-toolbar">
+                <label class="search grow"><span class="sr-only">Search transcript</span><input id="transcript-search" type="search" placeholder="Search this transcript…" /></label>
+                <span id="search-count" class="muted"></span>
+              </div>
+              <div id="transcript" class="transcript"></div>
+            </section>
+
+            <section id="tab-notes" class="tab-panel" hidden>
+              <p class="muted">Notes are stored in this browser for this lesson. AI-generated cited notes will plug into this same surface in the next wave.</p>
+              <textarea id="lesson-notes" rows="18" placeholder="Write your own notes, key takeaways, questions, or study plan…"></textarea>
+              <div class="note-actions"><button id="save-notes" type="button">Save notes</button><span id="note-status" class="muted" role="status"></span></div>
+            </section>
+
+            <section id="tab-bookmarks" class="tab-panel" hidden>
+              <p class="muted">Bookmark important transcript moments while reading.</p>
+              <div id="bookmark-list" class="bookmark-list"></div>
+            </section>
+          </div>
+        </section>
+      </section>
+
+      <section class="roadmap-strip">
+        <article><strong>Now</strong><span>Course discovery + transcript parsing + search + local notes/bookmarks</span></article>
+        <article><strong>Next</strong><span>Cited notes + flashcards + quizzes + concept graph + grounded tutor</span></article>
+        <article><strong>Scale</strong><span>SQLite FTS locally, optional cloud sync, async AI jobs, provider routing and MCP/API access</span></article>
+      </section>
+    </main>
+
+    <script src="/static/learn.js" type="module"></script>
+  </body>
+</html>
