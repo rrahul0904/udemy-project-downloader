@@ -14,8 +14,8 @@
       </a>
       <nav aria-label="Primary">
         <a href="/">Downloader</a>
+        <a class="active" href="/learn" aria-current="page">Course Intelligence</a>
         <a href="/lab">Study Lab</a>
-        <a class="active" href="/learn" aria-current="page">Learning</a>
       </nav>
     </header>
 
@@ -25,14 +25,14 @@
           <p class="eyebrow">COURSE → TRANSCRIPT → KNOWLEDGE</p>
           <h1>Turn archived lessons into a searchable study workspace.</h1>
           <p>
-            Course Intelligence discovers downloaded transcript files, groups them into courses,
-            connects matching local media, and gives every lesson a searchable, timestamp-aware workspace.
+            Course Intelligence discovers downloaded transcripts, indexes them with SQLite FTS,
+            connects matching local media, and keeps notes and bookmarks durably on the server.
           </p>
         </div>
         <div class="stats" aria-live="polite">
           <div><strong id="course-count">0</strong><span>courses</span></div>
           <div><strong id="lesson-count">0</strong><span>transcripts</span></div>
-          <div><strong>Local</strong><span>by default</span></div>
+          <div><strong>Durable</strong><span>SQLite state</span></div>
         </div>
       </section>
 
@@ -42,15 +42,17 @@
             <div><p class="eyebrow">LIBRARY</p><h2>Your courses</h2></div>
             <button id="refresh-library" class="ghost" type="button">Refresh</button>
           </div>
-          <label class="search"><span class="sr-only">Filter lessons</span><input id="lesson-filter" type="search" placeholder="Filter courses or lessons…" /></label>
-          <div id="library" class="library" aria-live="polite"><p class="muted">Scanning downloaded transcripts…</p></div>
+          <label class="search"><span class="sr-only">Filter lessons</span><input id="lesson-filter" type="search" placeholder="Filter course list…" /></label>
+          <label class="search"><span class="sr-only">Search all transcripts</span><input id="library-search" type="search" placeholder="Search across every transcript…" /></label>
+          <div id="library-search-results" class="library-search-results" aria-live="polite"></div>
+          <div id="library" class="library" aria-live="polite"><p class="muted">Indexing downloaded transcripts…</p></div>
         </aside>
 
         <section class="lesson-panel">
           <div id="empty-state" class="empty-state">
             <p class="eyebrow">SELECT A LESSON</p>
             <h2>Your transcript becomes the source of truth.</h2>
-            <p>Choose any transcript in the library. Timestamped VTT, SRT and JSON3 files are parsed locally by the FastAPI app.</p>
+            <p>Choose a lesson or search across the full library. VTT, SRT and JSON3 keep timestamp navigation; TXT and Markdown remain searchable plain text.</p>
           </div>
 
           <div id="lesson-workspace" hidden>
@@ -79,13 +81,13 @@
             </section>
 
             <section id="tab-notes" class="tab-panel" hidden>
-              <p class="muted">Notes are stored in this browser for this lesson. AI-generated cited notes will plug into this same surface in the next wave.</p>
-              <textarea id="lesson-notes" rows="18" placeholder="Write your own notes, key takeaways, questions, or study plan…"></textarea>
+              <p class="muted">Notes are stored in the application database for this lesson and survive browser and application restarts.</p>
+              <textarea id="lesson-notes" rows="18" maxlength="262144" placeholder="Write your own notes, key takeaways, questions, or study plan…"></textarea>
               <div class="note-actions"><button id="save-notes" type="button">Save notes</button><span id="note-status" class="muted" role="status"></span></div>
             </section>
 
             <section id="tab-bookmarks" class="tab-panel" hidden>
-              <p class="muted">Bookmark important transcript moments while reading.</p>
+              <p class="muted">Bookmarks are stored durably and link back to transcript timestamps.</p>
               <div id="bookmark-list" class="bookmark-list"></div>
             </section>
           </div>
@@ -93,9 +95,9 @@
       </section>
 
       <section class="roadmap-strip">
-        <article><strong>Now</strong><span>Course discovery + transcript parsing + search + local notes/bookmarks</span></article>
-        <article><strong>Next</strong><span>Cited notes + flashcards + quizzes + concept graph + grounded tutor</span></article>
-        <article><strong>Scale</strong><span>SQLite FTS locally, optional cloud sync, async AI jobs, provider routing and MCP/API access</span></article>
+        <article><strong>Production core</strong><span>Course ingestion + SQLite FTS + durable notes/bookmarks + authenticated downloader</span></article>
+        <article><strong>Study Lab</strong><span>21 local scientific, citation, data and study utilities remain available</span></article>
+        <article><strong>Later</strong><span>Cited AI notes, flashcards, quizzes, concept maps, grounded tutor and MCP are intentionally outside this launch wave</span></article>
       </section>
     </main>
 
