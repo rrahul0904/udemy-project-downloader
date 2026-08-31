@@ -33,22 +33,27 @@ test('course intelligence persists notes and bookmarks and searches FTS', async 
   const lesson = page.getByRole('button', { name: /Introduction/ }).first();
   await expect(lesson).toBeVisible();
   await lesson.click();
-  await expect(page.getByText(/durable transcript search with SQLite FTS5/i)).toBeVisible();
+  await expect(page.locator('#transcript').getByText(/durable transcript search with SQLite FTS5/i)).toBeVisible();
 
   await page.locator('#transcript-search').fill('SQLite FTS5');
   await expect(page.locator('#search-count')).toContainText('1 match');
 
-  await page.locator('.segment').nth(1).locator('.bookmark').click();
-  await page.getByRole('button', { name: 'Notes', exact: true }).click();
+  const bookmarkButton = page.locator('.segment').nth(1).locator('.bookmark');
+  const bookmarkClass = await bookmarkButton.getAttribute('class');
+  if (!bookmarkClass?.split(/\s+/).includes('saved')) {
+    await bookmarkButton.click();
+  }
+
+  await page.getByRole('tab', { name: 'Notes', exact: true }).click();
   await page.locator('#lesson-notes').fill('Persistent browser smoke note');
   await page.getByRole('button', { name: 'Save notes' }).click();
   await expect(page.locator('#note-status')).toContainText('Saved');
 
   await page.reload();
   await page.getByRole('button', { name: /Introduction/ }).first().click();
-  await page.getByRole('button', { name: 'Notes', exact: true }).click();
+  await page.getByRole('tab', { name: 'Notes', exact: true }).click();
   await expect(page.locator('#lesson-notes')).toHaveValue('Persistent browser smoke note');
-  await page.getByRole('button', { name: 'Bookmarks', exact: true }).click();
+  await page.getByRole('tab', { name: 'Bookmarks', exact: true }).click();
   await expect(page.locator('#bookmark-list')).toContainText('SQLite FTS5');
 
   await page.locator('#library-search').fill('SQLite FTS5');
