@@ -19,6 +19,7 @@ from .safety import slug_from_url
 
 SUPPORTED_BROWSER_COOKIES = {"brave", "chrome", "chromium", "edge", "firefox", "opera", "safari", "vivaldi"}
 MIN_FREE_BYTES = 256 * 1024 * 1024
+LOG_PERSIST_INTERVAL = 25
 
 
 @dataclass
@@ -140,9 +141,10 @@ class JobManager:
             except OSError:
                 pass
 
-    def _log(self, job: Job, message: str) -> None:
+    def _log(self, job: Job, message: str, *, persist: bool = True) -> None:
         job.add_log(message)
-        self._persist()
+        if persist:
+            self._persist()
 
     async def create_job(self, config: JobConfig, cookies_bytes: bytes | None) -> Job:
         _, _, free = shutil.disk_usage(self.downloads_dir)
@@ -163,7 +165,7 @@ class JobManager:
             os.chmod(cookies_path, 0o600)
 
         job = Job(id=job_id, config=config, output_dir=output_dir)
-        self._log(job, "Job queued.")
+        job.add_log("Job queued.")
         self.jobs[job_id] = job
         self._persist()
         job.task = asyncio.create_task(self._run_bounded(job, cookies_path))
@@ -224,11 +226,15 @@ class JobManager:
                 cwd=str(job.output_dir),
             )
             assert job.process.stdout is not None
+            log_lines = 0
             while True:
                 line = await job.process.stdout.readline()
                 if not line:
                     break
-                self._log(job, line.decode("utf-8", errors="replace").strip())
+                self._log(job, line.decode("utf-8", errors="replace").strip(), persist=False)
+                log_lines += 1
+                if log_lines % LOG_PERSIST_INTERVAL == 0:
+                    self._persist()
 
             job.return_code = await job.process.wait()
             self._log(job, f"yt-dlp finished with exit code {job.return_code}.")
