@@ -31,6 +31,14 @@ def normalize_supported_url(value: str) -> NormalizedUrl:
 
     if parsed.scheme not in {"http", "https"}:
         raise UrlValidationError("Use a full http or https Udemy or YouTube URL.")
+    if parsed.username is not None or parsed.password is not None:
+        raise UrlValidationError("Embedded URL credentials are not allowed.")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise UrlValidationError("The source URL contains an invalid port.") from exc
+    if port not in {None, 80, 443}:
+        raise UrlValidationError("Only standard web ports are allowed for source URLs.")
 
     host = (parsed.hostname or "").lower()
     if _is_udemy_host(host):
@@ -88,8 +96,8 @@ def _is_udemy_host(host: str) -> bool:
 
 
 def _normalize_parsed_url(parsed) -> str:
-    netloc = parsed.netloc.lower()
-    return urlunparse(("https", netloc, parsed.path, "", parsed.query, ""))
+    host = (parsed.hostname or "").lower()
+    return urlunparse(("https", host, parsed.path, "", parsed.query, ""))
 
 
 def _is_specific_youtube_url(parsed) -> bool:
