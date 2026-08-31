@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .jobs import JobConfig, JobManager, SUPPORTED_BROWSER_COOKIES, disk_usage
+from .learning_library import build_library, load_transcript, search_transcript
 from .safety import UrlValidationError, normalize_supported_url
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -34,9 +35,39 @@ async def study_lab() -> FileResponse:
     return FileResponse(STATIC_DIR / "lab.html")
 
 
+@app.get("/learn")
+async def course_intelligence() -> FileResponse:
+    return FileResponse(STATIC_DIR / "learn.html")
+
+
 @app.get("/api/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/library")
+async def course_library() -> dict[str, Any]:
+    return build_library(DOWNLOAD_DIR)
+
+
+@app.get("/api/learning/transcript")
+async def learning_transcript(path: str) -> dict[str, Any]:
+    try:
+        return load_transcript(DOWNLOAD_DIR, path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Transcript not found.") from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/learning/search")
+async def learning_search(path: str, q: str, limit: int = 50) -> dict[str, Any]:
+    try:
+        return search_transcript(DOWNLOAD_DIR, path, q, limit)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Transcript not found.") from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/jobs")
