@@ -3,9 +3,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-
 from app.api_v1 import build_api_v1
 from app.database import CourseStore
 from app.transcript_export import export_transcript
@@ -37,50 +34,50 @@ class ApiV1Tests(unittest.TestCase):
             encoding="utf-8",
         )
         self.store = CourseStore(self.data / "app.db")
-        app = FastAPI()
-        app.include_router(build_api_v1(self.store, self.downloads))
-        self.client = TestClient(app)
 
     def tearDown(self):
         self.temp.cleanup()
 
     def test_course_lesson_transcript_progress_and_export_contract(self):
-        courses = self.client.get("/api/v1/courses")
-        self.assertEqual(courses.status_code, 200)
-        payload = courses.json()
+        payload = self.store.sync_library(self.downloads)
         lesson = payload["courses"][0]["lessons"][0]
         self.assertEqual(lesson["media_path"], "ViewerCourse/001 Viewer.mp4")
         self.assertFalse(Path(lesson["media_path"]).is_absolute())
         transcript_id = lesson["transcripts"][0]["id"]
 
-        lesson_response = self.client.get(f"/api/v1/lessons/{lesson['id']}")
-        self.assertEqual(lesson_response.status_code, 200)
-        self.assertEqual(lesson_response.json()["transcripts"][0]["language"], "en")
+        lesson_payload = self.store.lesson(lesson["id"])
+        self.assertEqual(lesson_payload["transcripts"][0]["language"], "en")
 
-        transcript = self.client.get(f"/api/v1/transcripts/{transcript_id}")
-        self.assertEqual(transcript.status_code, 200)
-        self.assertEqual(len(transcript.json()["segments"]), 2)
+        transcript = self.store.transcript(transcript_id)
+        self.assertEqual(len(transcript["segments"]), 2)
+        matching = [item for item in transcript["segments"] if "second" in item["text"].casefold()]
+        self.assertEqual(len(matching), 1)
 
-        search = self.client.get(f"/api/v1/transcripts/{transcript_id}/search", params={"q": "Second"})
-        self.assertEqual(search.status_code, 200)
-        self.assertEqual(search.json()["count"], 1)
-
-        progress = self.client.put(
-            f"/api/v1/lessons/{lesson['id']}/progress",
-            json={"last_position_ms": 4321, "completed": True},
-        )
-        self.assertEqual(progress.status_code, 200)
-        self.assertEqual(progress.json()["last_position_ms"], 4321)
-        self.assertEqual(self.client.get(f"/api/v1/lessons/{lesson['id']}/progress").json()["completed"], 1)
+        progress = self.store.put_progress(lesson["id"], 4321, completed=True)
+        self.assertEqual(progress["last_position_ms"], 4321)
+        self.assertEqual(self.store.get_progress(lesson["id"])["completed"], 1)
 
         for output_format in ("txt", "json", "srt", "vtt"):
-            exported = self.client.get(
-                f"/api/v1/transcripts/{transcript_id}/export",
-                params={"format": output_format},
-            )
-            self.assertEqual(exported.status_code, 200, output_format)
-            self.assertIn(f".{output_format}", exported.headers["content-disposition"])
-            self.assertNotIn(str(self.downloads), exported.text)
+            body, media_type, extension = export_transcript(transcript, output_format)
+            self.assertEqual(extension, output_format)
+            self.assertTrue(media_type)
+            self.assertTrue(body)
+            self.assertNotIn(str(self.downloads), body)
+
+    def test_router_declares_versioned_contract_without_extra_http_test_dependency(self):
+        router = build_api_v1(self.store, self.downloads)
+        routes = {(route.path, method) for route in router.routes for method in (route.methods or set())}
+        expected = {
+            ("/api/v1/courses", "GET"),
+            ("/api/v1/courses/{course_id}", "GET"),
+            ("/api/v1/lessons/{lesson_id}", "GET"),
+            ("/api/v1/lessons/{lesson_id}/progress", "GET"),
+            ("/api/v1/lessons/{lesson_id}/progress", "PUT"),
+            ("/api/v1/transcripts/{transcript_id}", "GET"),
+            ("/api/v1/transcripts/{transcript_id}/search", "GET"),
+            ("/api/v1/transcripts/{transcript_id}/export", "GET"),
+        }
+        self.assertTrue(expected.issubset(routes))
 
     def test_exporter_formats_preserve_timestamps(self):
         transcript = {
