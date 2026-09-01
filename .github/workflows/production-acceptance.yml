@@ -1,0 +1,87 @@
+name: Production Acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      production_url:
+        description: "HTTPS URL of the live production service"
+        required: true
+        type: string
+      authorized_test_url:
+        description: "Optional explicitly authorized/public YouTube URL with captions for full downloader + Course Intelligence acceptance"
+        required: false
+        type: string
+      cancel_test_url:
+        description: "Optional slower explicitly authorized/public YouTube URL for cancellation acceptance"
+        required: false
+        type: string
+      verify_persistence:
+        description: "Re-check durable state after a Render restart/redeploy"
+        required: true
+        default: false
+        type: boolean
+      persistence_source_run_id:
+        description: "Workflow run ID that produced the production-acceptance-state artifact"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  live-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Require production password secret
+        env:
+          PRODUCTION_APP_PASSWORD: ${{ secrets.PRODUCTION_APP_PASSWORD }}
+        run: |
+          if [[ -z "$PRODUCTION_APP_PASSWORD" ]]; then
+            echo "Repository secret PRODUCTION_APP_PASSWORD is required for live acceptance." >&2
+            exit 1
+          fi
+
+      - name: Restore persistence state from prior acceptance run
+        if: ${{ inputs.verify_persistence }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.persistence_source_run_id }}
+        run: |
+          if [[ -z "$SOURCE_RUN_ID" ]]; then
+            echo "persistence_source_run_id is required when verify_persistence=true." >&2
+            exit 1
+          fi
+          gh run download "$SOURCE_RUN_ID" --name production-acceptance-state --dir .
+          test -s production-acceptance-state.json
+
+      - name: Run live production acceptance
+        env:
+          PRODUCTION_URL: ${{ inputs.production_url }}
+          PRODUCTION_APP_USER: admin
+          PRODUCTION_APP_PASSWORD: ${{ secrets.PRODUCTION_APP_PASSWORD }}
+          PRODUCTION_AUTHORIZED_TEST_URL: ${{ inputs.authorized_test_url }}
+          PRODUCTION_CANCEL_TEST_URL: ${{ inputs.cancel_test_url }}
+        run: |
+          args=()
+          if [[ "${{ inputs.verify_persistence }}" == "true" ]]; then
+            args+=(--verify-persistence)
+          fi
+          python scripts/live_acceptance.py "${args[@]}"
+
+      - name: Preserve acceptance persistence marker
+        if: ${{ !inputs.verify_persistence && inputs.authorized_test_url != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-acceptance-state
+          path: production-acceptance-state.json
+          if-no-files-found: error
+          retention-days: 14
