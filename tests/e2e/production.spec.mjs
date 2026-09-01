@@ -60,6 +60,27 @@ test('course intelligence persists notes and bookmarks and searches FTS', async 
   await expect(page.locator('#library-search-results')).toContainText('Production Test Course');
 });
 
+test('synchronized viewer exposes transcript variants exports and durable progress', async ({ page }) => {
+  const response = await page.request.get('/api/v1/courses');
+  expect(response.ok()).toBeTruthy();
+  const library = await response.json();
+  const lesson = library.courses[0].lessons[0];
+  expect(lesson.transcripts.length).toBeGreaterThan(0);
+
+  await page.goto(`/viewer?lesson=${encodeURIComponent(lesson.id)}`);
+  await expect(page.getByRole('heading', { name: /Introduction/i })).toBeVisible();
+  await expect(page.locator('#transcript-source')).toHaveValue(lesson.transcripts[0].id);
+  await expect(page.locator('#transcript')).toContainText('SQLite FTS5');
+  await page.locator('#transcript-search').fill('SQLite FTS5');
+  await expect(page.locator('#search-count')).toContainText('1 match');
+  await expect(page.locator('#export-txt')).toHaveAttribute('href', /\/api\/v1\/transcripts\/.+\/export\?format=txt/);
+
+  await page.getByRole('button', { name: 'Mark lesson complete' }).click();
+  await expect(page.getByRole('button', { name: /Completed/ })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: /Completed/ })).toBeVisible();
+});
+
 test('study lab loads and discovers compatible course fixture', async ({ page }) => {
   await page.goto('/lab');
   await expect(page.getByText('Statistics Calculator', { exact: true })).toBeVisible();
