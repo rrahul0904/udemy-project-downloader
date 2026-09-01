@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from .api_v1 import build_api_v1
 from .database import CourseStore
 from .jobs import JobConfig, JobManager, SUPPORTED_BROWSER_COOKIES, disk_usage
 from .learning_library import load_transcript, search_transcript
@@ -44,10 +45,17 @@ if APP_ENV == "production" and (not APP_USER or not APP_PASSWORD):
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="Course Intelligence", docs_url=None if APP_ENV == "production" else "/docs")
+app = FastAPI(
+    title="Course Intelligence",
+    version="1.0.0",
+    docs_url=None if APP_ENV == "production" else "/docs",
+    redoc_url=None if APP_ENV == "production" else "/redoc",
+    openapi_url="/api/v1/openapi.json",
+)
 store = CourseStore(DATA_DIR / "app.db")
 manager = JobManager(DOWNLOAD_DIR, DATA_DIR, max_concurrent_jobs=MAX_CONCURRENT_JOBS)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.include_router(build_api_v1(store, DOWNLOAD_DIR))
 _rate_windows: dict[str, deque[float]] = defaultdict(deque)
 
 
@@ -135,6 +143,11 @@ async def course_intelligence() -> FileResponse:
     return FileResponse(STATIC_DIR / "learn.html")
 
 
+@app.get("/viewer")
+async def synchronized_viewer() -> FileResponse:
+    return FileResponse(STATIC_DIR / "viewer.html")
+
+
 @app.get("/api/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -150,7 +163,13 @@ async def readiness() -> dict[str, Any]:
         "ffmpeg": bool(shutil.which("ffmpeg")),
         "yt_dlp": importlib.util.find_spec("yt_dlp") is not None,
     }
-    ready = checks["database"] == "ok" and checks["data_dir"] and checks["download_dir"] and checks["ffmpeg"] and checks["yt_dlp"]
+    ready = (
+        checks["database"] == "ok"
+        and checks["data_dir"]
+        and checks["download_dir"]
+        and checks["ffmpeg"]
+        and checks["yt_dlp"]
+    )
     if not ready:
         raise HTTPException(status_code=503, detail={"status": "not_ready", "checks": checks})
     return {"status": "ready", "checks": checks}
