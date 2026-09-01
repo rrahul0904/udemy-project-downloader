@@ -26,12 +26,12 @@
           <h1>Turn archived lessons into a searchable study workspace.</h1>
           <p>
             Course Intelligence discovers downloaded transcripts, indexes them with SQLite FTS,
-            connects matching local media, and keeps notes and bookmarks durably on the server.
+            connects matching local media, and keeps notes, bookmarks, and progress durably on the server.
           </p>
         </div>
         <div class="stats" aria-live="polite">
           <div><strong id="course-count">0</strong><span>courses</span></div>
-          <div><strong id="lesson-count">0</strong><span>transcripts</span></div>
+          <div><strong id="lesson-count">0</strong><span>lessons</span></div>
           <div><strong>Durable</strong><span>SQLite state</span></div>
         </div>
       </section>
@@ -52,7 +52,7 @@
           <div id="empty-state" class="empty-state">
             <p class="eyebrow">SELECT A LESSON</p>
             <h2>Your transcript becomes the source of truth.</h2>
-            <p>Choose a lesson or search across the full library. VTT, SRT and JSON3 keep timestamp navigation; TXT and Markdown remain searchable plain text.</p>
+            <p>Choose a lesson or search across the full library. Timestamped variants can be opened in the synchronized source viewer; TXT and Markdown remain searchable plain text.</p>
           </div>
 
           <div id="lesson-workspace" hidden>
@@ -60,7 +60,7 @@
               <div><p class="eyebrow" id="lesson-course">COURSE</p><h2 id="lesson-title">Lesson</h2></div>
               <div class="actions">
                 <button id="export-notes" class="ghost" type="button">Export notes</button>
-                <a id="open-media" class="button-link" href="#" hidden>Open media</a>
+                <a id="open-media" class="button-link" href="#" hidden>Open synced viewer</a>
               </div>
             </div>
 
@@ -81,7 +81,7 @@
             </section>
 
             <section id="tab-notes" class="tab-panel" hidden>
-              <p class="muted">Notes are stored in the application database for this lesson and survive browser and application restarts.</p>
+              <p class="muted">Personal notes are stored separately from generated study artifacts and survive browser/application restarts.</p>
               <textarea id="lesson-notes" rows="18" maxlength="262144" placeholder="Write your own notes, key takeaways, questions, or study plan…"></textarea>
               <div class="note-actions"><button id="save-notes" type="button">Save notes</button><span id="note-status" class="muted" role="status"></span></div>
             </section>
@@ -95,9 +95,9 @@
       </section>
 
       <section class="roadmap-strip">
-        <article><strong>Production core</strong><span>Course ingestion + SQLite FTS + durable notes/bookmarks + authenticated downloader</span></article>
-        <article><strong>Study Lab</strong><span>21 local scientific, citation, data and study utilities remain available</span></article>
-        <article><strong>Later</strong><span>Cited AI notes, flashcards, quizzes, concept maps, grounded tutor and MCP are intentionally outside this launch wave</span></article>
+        <article><strong>Model v2</strong><span>Course/section/lesson hierarchy + transcript variants/provenance + attachments</span></article>
+        <article><strong>Source viewer</strong><span>Embedded playback + synchronized transcript + exports + durable progress</span></article>
+        <article><strong>Next learning wave</strong><span>Cited notes, flashcards, quizzes, concept maps, grounded tutor and mastery</span></article>
       </section>
     </main>
 
