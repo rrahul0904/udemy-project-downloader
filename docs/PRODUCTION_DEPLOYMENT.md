@@ -4,16 +4,15 @@
 
 Course Intelligence is a stateful Docker application. A complete deployment must support all of the following in the same trusted environment or through equivalent durable services:
 
-- the FastAPI web process;
-- Python 3.12;
+- FastAPI / Python 3.12;
 - `yt-dlp` subprocesses;
 - FFmpeg;
-- downloads that can outlive a deployment;
-- `DATA_DIR/app.db` and `DATA_DIR/jobs.json` that can outlive a deployment;
 - long-running download jobs;
+- SQLite state that survives deploys;
+- downloaded media and transcripts that survive deploys;
 - HTTPS and environment-secret management.
 
-The minimum production topology is therefore:
+The supported first-production topology is:
 
 ```text
 HTTPS
@@ -24,17 +23,57 @@ private authenticated FastAPI container
   |-- Course Intelligence / SQLite FTS5
   `-- Study Lab
        |
-       +-- persistent /app/data
-       `-- persistent /downloads
+       `-- persistent /app/storage
+             |-- data
+             `-- downloads
 ```
 
 Do **not** deploy only the UI or a short-lived serverless FastAPI function and call it production. Function-local filesystems and request-lifetime subprocesses do not satisfy the downloader or persistence requirements.
 
-## Provider status
+## Primary provider: Render
 
-No compatible durable-container hosting account is currently connected to the implementation environment for this repository. The connected Vercel account is intentionally not used as the final deployment target for the current monolithic runtime because the product depends on long-lived `yt-dlp`/FFmpeg work and persistent filesystem state.
+The repository includes `render.yaml` as the production Blueprint. The Blueprint defines:
 
-A production release therefore requires one external infrastructure action: provision a Docker-capable service with a persistent volume, then provide/deploy this repository to it. Railway, Render, Fly.io, a VM, Kubernetes, or another Docker host can work **only if** the selected plan supplies the runtime and persistence guarantees above. Provider names here are examples, not claims of an existing deployment.
+- one Docker web service named `course-intelligence`;
+- branch `main`;
+- Virginia region;
+- 1 CPU / 2 GB RAM (`1c-2g`);
+- automatic deploys only after linked CI checks pass;
+- `/api/health` as the Render health-check path;
+- one 10 GB persistent disk mounted at `/app/storage`;
+- `DATA_DIR=/app/storage/data`;
+- `DOWNLOAD_DIR=/app/storage/downloads`;
+- `APP_ENV=production`;
+- a generated production `APP_PASSWORD` that is never stored in Git;
+- `PUBLIC_BASE_URL` derived from Render's assigned external URL;
+- bounded downloader concurrency and a 5 GiB per-file limit for the initial launch.
+
+Render persistent disks are single-service storage. This matches the current single-instance SQLite architecture; do not scale this service to multiple writers while SQLite remains the authoritative database.
+
+## Exact external setup action
+
+The repository-controlled configuration is complete when `render.yaml` is merged into `main`. The remaining account-level action is performed in the Render Dashboard:
+
+1. Sign in to Render.
+2. Choose **New > Blueprint**.
+3. Connect the GitHub repository `rrahul0904/udemy-project-downloader`.
+4. Select the Blueprint file `render.yaml` from `main`.
+5. Review the resources and confirm creation of the `course-intelligence` web service and `course-intelligence-storage` disk.
+6. Apply the Blueprint.
+7. After the service is created, retrieve the generated `APP_PASSWORD` from the service Environment settings and store it in a password manager. The username defaults to `admin` for the first private deployment and may be rotated in Render without a code change.
+
+The Blueprint uses `autoDeployTrigger: checksPass`, so future `main` deploys are released only after the linked GitHub checks pass.
+
+## Fallback provider
+
+If Render cannot satisfy the runtime after genuine investigation, use Railway or another Docker host with equivalent persistent-volume guarantees. Preserve the same logical layout under one durable mount wherever practical:
+
+```text
+/app/storage/data
+/app/storage/downloads
+```
+
+Do not use Vercel as a partial workaround for the current monolith. The workload requires long-lived `yt-dlp`/FFmpeg processes and durable filesystem state.
 
 ## Local verification
 
@@ -52,13 +91,13 @@ docker compose up --build
 
 The service is available at `http://127.0.0.1:8080`.
 
-Canonical non-browser verification:
+Canonical verification:
 
 ```bash
 bash scripts/verify.sh
 ```
 
-Full browser verification:
+Browser verification:
 
 ```bash
 RUN_E2E=1 bash scripts/verify.sh
@@ -72,36 +111,43 @@ VERIFY_DOCKER=1 bash scripts/verify.sh
 
 ## Required production environment
 
-Set at least:
+The Render Blueprint configures:
 
 ```text
 APP_ENV=production
-APP_USER=<private application username>
-APP_PASSWORD=<long unique secret>
-PUBLIC_BASE_URL=https://your-private-domain.example
-DATA_DIR=/app/data
-DOWNLOAD_DIR=/downloads
+APP_USER=admin
+APP_PASSWORD=<generated by Render>
+PUBLIC_BASE_URL=<Render external URL>
+DATA_DIR=/app/storage/data
+DOWNLOAD_DIR=/app/storage/downloads
 MAX_CONCURRENT_JOBS=2
 JOB_RATE_LIMIT_PER_MINUTE=5
-MAX_DOWNLOAD_BYTES=0
+MAX_DOWNLOAD_BYTES=5368709120
 ```
 
 `APP_USER` and `APP_PASSWORD` are mandatory in production; startup fails closed without them.
 
-The first launch deliberately uses a private HTTP Basic authentication boundary instead of exposing an unrestricted public downloader. Terminate TLS at the hosting platform/load balancer and never send Basic credentials over plaintext HTTP.
+The first launch deliberately uses private HTTP Basic authentication instead of exposing an unrestricted public downloader. Render terminates TLS for the public HTTPS endpoint; never send Basic credentials over plaintext HTTP.
 
-## Persistent volumes
+## Persistent storage
 
-Mount durable storage at both:
+The production disk is mounted at:
 
 ```text
-/app/data
-/downloads
+/app/storage
 ```
 
-`/app/data` contains the SQLite Course Intelligence database and persisted job history. `/downloads` contains archived media, transcripts, metadata, thumbnails and practice-test exports.
+Only paths under the Render disk mount survive restarts and deploys. Therefore all authoritative mutable state is routed beneath it:
 
-The container runs as UID/GID `10001`. The mounted volume must be writable by that identity. On a host-managed bind mount, initialize ownership as appropriate for that platform before starting production.
+```text
+/app/storage/data/app.db
+/app/storage/data/jobs.json
+/app/storage/downloads/
+```
+
+`data/` contains the SQLite Course Intelligence database and persisted job history. `downloads/` contains archived media, transcripts, metadata, thumbnails, and practice-test exports.
+
+The container runs as UID/GID `10001`. `/api/readiness` verifies that the configured data and download directories are writable. If the provider mount is not writable by the application identity, treat that as a release blocker and make the smallest provider-compatible permission fix before launch.
 
 Never mount a cookie export as a permanent secret. Uploaded cookies are copied to `DATA_DIR/cookies` only for the job and removed after use; stale cookie files are also removed at application startup.
 
@@ -113,17 +159,7 @@ Current production schema version: `1`.
 
 Transcript content is indexed in SQLite FTS5. Course ingestion is idempotent and reindexes a transcript when its parsed content hash changes.
 
-Before an application upgrade, back up:
-
-```text
-/app/data/app.db
-/app/data/jobs.json
-/downloads
-```
-
-For SQLite backup while the application is live, use the SQLite backup API or stop writes briefly and copy the database plus WAL files consistently. Do not copy only `app.db` while ignoring an active WAL.
-
-## Build
+## Build and start
 
 From a clean checkout:
 
@@ -131,19 +167,17 @@ From a clean checkout:
 docker build -t course-intelligence:<git-sha> .
 ```
 
-The image installs FFmpeg and all pinned Python dependencies, creates an unprivileged application user, and exposes port `8000`.
+The image installs FFmpeg and pinned Python dependencies, creates an unprivileged application user, and exposes port `8000`.
 
-## Start
-
-A typical platform command is already baked into the image:
+The image starts with:
 
 ```text
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
 ```
 
-Attach the two persistent volumes before starting the container.
+Render detects the bound web port and routes HTTPS traffic to the service.
 
-## Health checks
+## Health and readiness
 
 Public liveness:
 
@@ -171,48 +205,62 @@ Readiness verifies:
 - FFmpeg availability;
 - `yt-dlp` availability.
 
-A `503` means the deployment should not receive production traffic.
+A `503` means production is not ready.
 
 ## Production acceptance
 
-After deploying the exact merged `main` SHA, verify with authenticated browser and HTTP requests:
+After deploying the exact merged `main` SHA, verify with an authenticated browser and HTTP requests:
 
-1. `/` loads the downloader.
-2. `/learn` loads Course Intelligence.
-3. `/lab` loads Study Lab.
-4. `/api/health` returns `200` without credentials.
-5. `/api/readiness` returns `200` with credentials.
-6. Anonymous access to `/`, `/learn`, `/lab` and job APIs returns `401`.
-7. A legal/public YouTube fixture or other authorized media can create a job, stream status through polling, complete, and appear in `/api/downloads`.
-8. Cancellation terminates an active test job.
-9. A resulting transcript is ingested into Course Intelligence.
-10. FTS search finds a known transcript phrase.
-11. Notes and bookmarks remain after page refresh and application restart.
-12. Study Lab can load a compatible file from the download inventory.
-13. Browser console and server logs show no blocking errors.
-14. Restart the container and verify the SQLite state and downloaded media remain.
+1. `/api/health` returns `200` without credentials.
+2. Anonymous `/`, `/learn`, `/lab`, and job API requests are rejected.
+3. Authenticated `/`, `/learn`, `/lab`, and `/api/readiness` succeed.
+4. Navigation works among Downloader, Course Intelligence, and Study Lab.
+5. A legal/public YouTube fixture or other authorized media creates a job, reports progress, completes, and appears in `/api/downloads`.
+6. A separate legal test job can be cancelled and its subprocess terminates.
+7. A resulting transcript is ingested into Course Intelligence.
+8. FTS search finds a known phrase and returns the correct lesson/timestamp.
+9. A note and bookmark survive page refresh.
+10. Study Lab can load a compatible file from the download inventory.
+11. Browser console and server logs show no blocking errors.
+12. Restart or redeploy the service.
+13. Confirm SQLite state, job history, downloads, transcripts, FTS search, notes, and bookmarks all remain.
+14. Confirm the deployed commit corresponds to current GitHub `main`.
 
-Never use protected/unauthorized media as an acceptance test.
+Never use protected or unauthorized media as an acceptance test.
+
+## Backups
+
+Before an application upgrade or destructive provider change, back up:
+
+```text
+/app/storage/data/app.db
+/app/storage/data/jobs.json
+/app/storage/downloads
+```
+
+Render persistent disks provide automatic snapshots, but application-level SQLite backups still need WAL-consistent handling. Use the SQLite backup API or stop writes briefly and copy the database plus WAL files consistently. Do not copy only `app.db` while ignoring an active WAL.
 
 ## Rollback
 
-Deployments should be tagged by Git SHA.
+Deployments are identified by Git SHA.
 
 To roll back:
 
 1. stop new download submissions;
 2. wait for or explicitly cancel running jobs;
-3. back up `DATA_DIR` and `/downloads`;
-4. redeploy the prior known-good image/SHA against the same persistent volumes;
+3. back up persistent state;
+4. redeploy the prior known-good Git SHA against the same persistent disk;
 5. call `/api/health` and `/api/readiness`;
 6. smoke-test `/`, `/learn`, and `/lab`;
-7. re-enable traffic.
+7. verify persisted notes, bookmarks, course index, and downloads;
+8. re-enable normal use.
 
-Schema version 1 is backward-simple, but a future migration that is not backward-compatible must ship a documented database rollback/restore procedure before deployment.
+Do not delete or replace the persistent disk during an ordinary application rollback.
 
 ## Known launch limitations
 
 - The first production authentication boundary is intended for a private/personal deployment, not public multi-user SaaS.
-- Job metadata is persisted, but subprocesses cannot survive a container restart. Jobs that were queued/running are marked failed with an explicit restart message and must be retried.
-- SQLite is appropriate for the current single-instance deployment. Do not scale multiple writers against a shared SQLite file.
-- AI study kits, vector RAG, MCP, billing and multi-tenancy are intentionally outside this production-closeout wave.
+- Job metadata persists, but subprocesses cannot survive a container restart. Jobs that were queued/running are marked failed with an explicit restart message and must be retried.
+- SQLite is appropriate for the current single-instance deployment. Do not run multiple writers against the same SQLite file.
+- A persistent disk disables zero-downtime instance swaps on Render because only one service instance can own the disk at a time.
+- AI study kits, vector RAG, MCP, billing, and multi-tenancy are intentionally outside this launch wave.
