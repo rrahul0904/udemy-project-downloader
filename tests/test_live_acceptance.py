@@ -1,5 +1,6 @@
 import base64
 import importlib.util
+import sys
 import unittest
 from pathlib import Path
 
@@ -7,8 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "live_acceptance.py"
 SPEC = importlib.util.spec_from_file_location("live_acceptance", SCRIPT)
-live_acceptance = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
+live_acceptance = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = live_acceptance
 SPEC.loader.exec_module(live_acceptance)
 
 
