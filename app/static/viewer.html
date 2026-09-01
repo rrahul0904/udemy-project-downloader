@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Synchronized Viewer · Course Intelligence</title>
+    <link rel="stylesheet" href="/static/viewer.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/learn"><span class="brand-mark">CI</span><span><strong>Course Intelligence</strong><small>Synchronized source viewer</small></span></a>
+      <nav aria-label="Primary">
+        <a href="/">Downloader</a>
+        <a href="/learn">Course Intelligence</a>
+        <a href="/lab">Study Lab</a>
+      </nav>
+    </header>
+
+    <main class="viewer-shell">
+      <section class="viewer-head">
+        <div>
+          <p class="eyebrow">SOURCE-ALIGNED LEARNING</p>
+          <h1 id="lesson-title">Loading lesson…</h1>
+          <p id="lesson-meta" class="muted"></p>
+        </div>
+        <a class="back-link" href="/learn">← Back to library</a>
+      </section>
+
+      <section id="viewer-error" class="error" hidden role="alert"></section>
+
+      <section class="viewer-grid">
+        <div class="media-column">
+          <div class="media-frame" id="media-frame">
+            <video id="media-player" controls preload="metadata" playsinline hidden></video>
+            <audio id="audio-player" controls preload="metadata" hidden></audio>
+            <div id="no-media" class="no-media" hidden>
+              <strong>No matching local media file</strong>
+              <span>The transcript remains readable and searchable.</span>
+            </div>
+          </div>
+
+          <div class="source-controls">
+            <label>
+              <span>Transcript source</span>
+              <select id="transcript-source" aria-label="Transcript language and source"></select>
+            </label>
+            <label class="search-label">
+              <span>Search transcript</span>
+              <input id="transcript-search" type="search" placeholder="Search this transcript…" />
+            </label>
+          </div>
+
+          <div class="viewer-options" aria-label="Viewer preferences">
+            <label><input id="auto-scroll" type="checkbox" checked /> Auto-scroll transcript</label>
+            <label><input id="show-timestamps" type="checkbox" checked /> Show timestamps</label>
+            <button id="mark-complete" type="button">Mark lesson complete</button>
+          </div>
+
+          <div class="export-row" aria-label="Transcript exports">
+            <span>Export:</span>
+            <a id="export-txt" href="#">TXT</a>
+            <a id="export-json" href="#">JSON</a>
+            <a id="export-srt" href="#">SRT</a>
+            <a id="export-vtt" href="#">VTT</a>
+          </div>
+        </div>
+
+        <aside class="transcript-column" aria-label="Synchronized transcript">
+          <div class="transcript-head">
+            <div><strong>Transcript</strong><span id="search-count" class="muted"></span></div>
+            <span id="progress-status" class="muted" role="status"></span>
+          </div>
+          <div id="transcript" class="transcript" tabindex="0" aria-live="polite"></div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="/static/viewer.js" type="module"></script>
+  </body>
+</html>
