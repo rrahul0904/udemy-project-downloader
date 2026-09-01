@@ -62,3 +62,46 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build production image
         run: docker build -t course-intelligence:${{ github.sha }} .
+
+  render-blueprint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install YAML parser
+        run: python -m pip install --disable-pip-version-check --no-cache-dir PyYAML==6.0.3
+      - name: Validate Blueprint YAML and production contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          data = yaml.safe_load(Path('render.yaml').read_text(encoding='utf-8'))
+          assert isinstance(data, dict)
+          services = data.get('services')
+          assert isinstance(services, list) and len(services) == 1
+          service = services[0]
+          assert service['type'] == 'web'
+          assert service['name'] == 'course-intelligence'
+          assert service['runtime'] == 'docker'
+          assert service['branch'] == 'main'
+          assert service['autoDeployTrigger'] == 'checksPass'
+          assert service['healthCheckPath'] == '/api/health'
+          assert service['dockerfilePath'] == './Dockerfile'
+          disk = service['disk']
+          assert disk['mountPath'] == '/app/storage'
+          assert int(disk['sizeGB']) >= 10
+          env = {item['key']: item for item in service['envVars']}
+          assert env['APP_ENV']['value'] == 'production'
+          assert env['APP_PASSWORD']['generateValue'] is True
+          assert env['DATA_DIR']['value'] == '/app/storage/data'
+          assert env['DOWNLOAD_DIR']['value'] == '/app/storage/downloads'
+          assert env['MAX_DOWNLOAD_BYTES']['value'] == '5368709120'
+          base = env['PUBLIC_BASE_URL']['fromService']
+          assert base['type'] == 'web'
+          assert base['name'] == 'course-intelligence'
+          assert base['envVarKey'] == 'RENDER_EXTERNAL_URL'
+          print('Render Blueprint YAML/production contract: ok')
+          PY

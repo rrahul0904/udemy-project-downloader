@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+
+services:
+  - type: web
+    name: course-intelligence
+    runtime: docker
+    branch: main
+    region: virginia
+    plan: 1c-2g
+    autoDeployTrigger: checksPass
+    healthCheckPath: /api/health
+    dockerfilePath: ./Dockerfile
+    disk:
+      name: course-intelligence-storage
+      mountPath: /app/storage
+      sizeGB: 10
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_USER
+        value: admin
+      - key: APP_PASSWORD
+        generateValue: true
+      - key: PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: course-intelligence
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: DATA_DIR
+        value: /app/storage/data
+      - key: DOWNLOAD_DIR
+        value: /app/storage/downloads
+      - key: MAX_CONCURRENT_JOBS
+        value: "2"
+      - key: JOB_RATE_LIMIT_PER_MINUTE
+        value: "5"
+      - key: MAX_DOWNLOAD_BYTES
+        value: "5368709120"
