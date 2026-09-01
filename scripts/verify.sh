@@ -3,6 +3,7 @@ set -euo pipefail
 
 python -m unittest discover -s tests -v
 python -m compileall -q app
+python -m py_compile scripts/live_acceptance.py
 python - <<'PY'
 import sqlite3
 con = sqlite3.connect(':memory:')
