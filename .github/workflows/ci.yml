@@ -62,3 +62,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build production image
         run: docker build -t course-intelligence:${{ github.sha }} .
+
+  render-blueprint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Render CLI
+        run: curl -fsSL https://raw.githubusercontent.com/render-oss/cli/main/bin/install.sh | sh
+      - name: Validate Render Blueprint
+        run: render blueprints validate render.yaml
