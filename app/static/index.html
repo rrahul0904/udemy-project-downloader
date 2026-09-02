@@ -1,151 +1,54 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Local Media Downloader</title>
-    <link rel="stylesheet" href="/static/styles.css" />
-    <link rel="stylesheet" href="/static/integration.css" />
-  </head>
-  <body>
-    <main class="shell">
-      <section class="workspace">
-        <aside class="panel">
-          <div class="brand">
-            <div class="brand-mark" aria-hidden="true">LD</div>
-            <div>
-              <h1>Local Media Downloader</h1>
-              <p>Local archive console</p>
-            </div>
-          </div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Acquire · Course Intelligence OS</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/integration.css" />
+  <link rel="stylesheet" href="/static/os.css" />
+  <link rel="stylesheet" href="/static/acquire-os.css" />
+</head>
+<body>
+<div class="ci-shell">
+  <header class="ci-topbar">
+    <a class="ci-brand" href="/home"><span class="ci-brand-mark">CI</span><span class="ci-brand-copy"><strong>Course Intelligence OS</strong><small>Authorized local archive + learning</small></span></a>
+    <nav class="ci-mode-nav" aria-label="Primary"><a data-mode-link="home" href="/home">Library</a><a data-mode-link="acquire" href="/">Acquire</a><a data-mode-link="learn" href="/learn">Learn</a><a data-mode-link="work" href="/lab">Work</a><a data-mode-link="files" href="/files-ui">Files</a></nav>
+    <div class="ci-top-actions"><a class="ci-icon-button" data-mode-link="settings" href="/settings" aria-label="Settings">⚙</a><button class="ci-icon-button" data-theme-toggle type="button">◐</button></div>
+  </header>
 
-          <form id="job-form" class="form">
-            <label>
-              <span>Course or video URL</span>
-              <input
-                name="course_url"
-                type="url"
-                placeholder="https://www.udemy.com/course/example/ or https://www.youtube.com/watch?v=..."
-                required
-              />
-            </label>
+  <main class="ci-container acquire-page">
+    <section class="acquire-intro"><div><span class="ci-eyebrow">ACQUIRE · AUTHORIZED ARCHIVE</span><h1>Archive course material you are allowed to keep.</h1><p>Bring Udemy and YouTube lessons into your private learning workspace with subtitles, metadata, media, and optional practice-test extraction.</p></div><span class="ci-badge green">local-first</span></section>
+    <div class="ci-trust" style="margin-bottom:18px"><span>!</span><div><strong>Use only authorized material.</strong> Use this only for content you own, created, or are authorized to archive for personal study. This product does not provide DRM or access-control bypass.</div></div>
 
-            <fieldset class="auth-box">
-              <legend>Authentication</legend>
-              <label>
-                <input name="auth_method" type="radio" value="none" checked />
-                <span>No cookies</span>
-              </label>
-              <label>
-                <input name="auth_method" type="radio" value="browser" />
-                <span>Use local browser session</span>
-              </label>
-              <label>
-                <input name="auth_method" type="radio" value="cookies_file" />
-                <span>Upload cookies.txt</span>
-              </label>
-            </fieldset>
+    <section class="acquire-layout">
+      <aside class="acquire-config">
+        <div style="margin-bottom:16px"><span class="ci-eyebrow">ARCHIVE JOB</span><h2 style="margin:4px 0 5px">Download configuration</h2><p class="ci-secondary" style="margin:0;font-size:13px">Choose source, authentication, quality, and transcript options.</p></div>
+        <form id="job-form" class="form">
+          <label><span>Course or video URL</span><input name="course_url" type="url" placeholder="https://www.udemy.com/course/... or https://www.youtube.com/watch?v=..." required /></label>
+          <fieldset class="auth-box"><legend>Authentication</legend><label><input name="auth_method" type="radio" value="none" checked /><span>No cookies</span></label><label><input name="auth_method" type="radio" value="browser" /><span>Use local browser session</span></label><label><input name="auth_method" type="radio" value="cookies_file" /><span>Upload cookies.txt</span></label></fieldset>
+          <div class="ci-privacy"><span>●</span><div>Cookies are used only for authorized local access. Cookie contents are not displayed in job logs.</div></div>
+          <label id="browser-row"><span>Browser</span><select name="browser"><option value="chrome">Chrome</option><option value="safari">Safari</option><option value="firefox">Firefox</option><option value="brave">Brave</option><option value="edge">Edge</option><option value="chromium">Chromium</option><option value="vivaldi">Vivaldi</option><option value="opera">Opera</option></select></label>
+          <label id="cookies-row" hidden><span>Cookies file</span><input name="cookies_file" type="file" accept=".txt,text/plain" /></label>
+          <div class="row"><label><span>Quality</span><select name="quality"><option value="best">Best</option><option value="1080">1080p max</option><option value="720">720p max</option><option value="480">480p max</option><option value="360">360p max</option></select></label><label><span>Subtitle language</span><input name="subtitle_languages" value="en.*" /></label></div>
+          <div class="checks"><label><input name="subtitles" type="checkbox" checked /><span>Manual subtitles</span></label><label><input name="auto_subtitles" type="checkbox" /><span>Auto subtitles</span></label><label><input name="include_practice_tests" type="checkbox" checked /><span>Udemy practice tests</span></label></div>
+          <label class="confirm"><input name="confirm_authorized" type="checkbox" required /><span><strong>I am authorized to archive this content for local personal use.</strong></span></label>
+          <div class="acquire-actions"><button class="primary" type="submit">Start archive job</button><button id="validate-url" class="validate" type="button">Validate URL</button></div>
+          <p id="form-message" class="message" role="status"></p>
+        </form>
+      </aside>
 
-            <label id="browser-row">
-              <span>Browser</span>
-              <select name="browser">
-                <option value="chrome">Chrome</option>
-                <option value="safari">Safari</option>
-                <option value="firefox">Firefox</option>
-                <option value="brave">Brave</option>
-                <option value="edge">Edge</option>
-                <option value="chromium">Chromium</option>
-                <option value="vivaldi">Vivaldi</option>
-                <option value="opera">Opera</option>
-              </select>
-            </label>
-
-            <label id="cookies-row" hidden>
-              <span>Cookies file</span>
-              <input name="cookies_file" type="file" accept=".txt,text/plain" />
-            </label>
-
-            <div class="row">
-              <label>
-                <span>Quality</span>
-                <select name="quality">
-                  <option value="best">Best</option>
-                  <option value="1080">1080p max</option>
-                  <option value="720">720p max</option>
-                  <option value="480">480p max</option>
-                  <option value="360">360p max</option>
-                </select>
-              </label>
-
-              <label>
-                <span>Subtitle lang</span>
-                <input name="subtitle_languages" value="en.*" />
-              </label>
-            </div>
-
-            <div class="checks">
-              <label>
-                <input name="subtitles" type="checkbox" checked />
-                <span>Manual subtitles</span>
-              </label>
-              <label>
-                <input name="auto_subtitles" type="checkbox" />
-                <span>Auto subtitles</span>
-              </label>
-              <label>
-                <input name="include_practice_tests" type="checkbox" checked />
-                <span>Udemy practice tests</span>
-              </label>
-            </div>
-
-            <label class="confirm">
-              <input name="confirm_authorized" type="checkbox" required />
-              <span>I am authorized to archive this content for local personal use.</span>
-            </label>
-
-            <button class="primary" type="submit">Start Download</button>
-            <p id="form-message" class="message" role="status"></p>
-          </form>
-        </aside>
-
-        <section class="main-panel">
-          <div class="toolbar">
-            <div>
-              <h2>Jobs</h2>
-              <p id="download-root">Downloads folder loading...</p>
-            </div>
-            <div class="toolbar-actions">
-              <a class="button-link" href="/learn">Course Intelligence</a>
-              <a class="button-link" href="/lab">Study Lab</a>
-              <button id="refresh" type="button">Refresh</button>
-            </div>
-          </div>
-
-          <div class="job-grid">
-            <section class="list-panel">
-              <div id="jobs" class="jobs"></div>
-            </section>
-
-            <section class="log-panel">
-              <div class="log-head">
-                <h2>Log</h2>
-                <button id="cancel-job" type="button" disabled>Cancel</button>
-              </div>
-              <pre id="logs" class="logs">No job selected.</pre>
-            </section>
-          </div>
-
-          <section class="downloads">
-            <div class="downloads-head">
-              <h2>Downloads</h2>
-              <p id="disk"></p>
-            </div>
-            <div id="files" class="files"></div>
-          </section>
-        </section>
+      <section class="acquire-console">
+        <div class="toolbar"><div><span class="ci-eyebrow">LOCAL OPERATIONS</span><h2>Jobs console</h2><p id="download-root">Downloads folder loading...</p></div><div class="toolbar-actions"><a href="/learn">Learn</a><a href="/lab">Study Lab</a><button id="refresh" type="button">Refresh</button></div></div>
+        <div class="job-grid"><section class="list-panel"><div id="jobs" class="jobs"></div></section><section class="log-panel"><div class="log-head"><h2>Live log</h2><button id="cancel-job" type="button" disabled>Cancel</button></div><pre id="logs" class="logs">No job selected.</pre></section></div>
       </section>
-    </main>
 
-    <script src="/static/app.js"></script>
-  </body>
+      <section class="acquire-files"><div class="downloads-head"><div><span class="ci-eyebrow">ARCHIVE INVENTORY</span><h2>Downloads</h2></div><p id="disk" class="ci-mono ci-muted"></p></div><div id="files" class="files"></div></section>
+    </section>
+  </main>
+</div>
+<script src="/static/os.js" type="module"></script>
+<script src="/static/app.js"></script>
+<script src="/static/acquire-ui.js" type="module"></script>
+</body>
 </html>
