@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Home · Course Intelligence OS</title>
+  <link rel="stylesheet" href="/static/os.css" />
+</head>
+<body>
+  <div class="ci-shell">
+    <header class="ci-topbar">
+      <a class="ci-brand" href="/home"><span class="ci-brand-mark">CI</span><span class="ci-brand-copy"><strong>Course Intelligence OS</strong><small>Private, source-grounded learning workspace</small></span></a>
+      <nav class="ci-mode-nav" aria-label="Primary">
+        <a data-mode-link="home" href="/home">Library</a>
+        <a data-mode-link="acquire" href="/">Acquire</a>
+        <a data-mode-link="learn" href="/learn">Learn</a>
+        <a data-mode-link="work" href="/lab">Work</a>
+        <a data-mode-link="files" href="/files-ui">Files</a>
+      </nav>
+      <div class="ci-top-actions"><a class="ci-icon-button" data-mode-link="settings" href="/settings" aria-label="Settings">⚙</a><button class="ci-icon-button" data-theme-toggle type="button" aria-label="Toggle theme">◐</button></div>
+    </header>
+
+    <main class="ci-container ci-page">
+      <section class="ci-page-heading">
+        <div><span class="ci-eyebrow">YOUR LOCAL LEARNING LIBRARY</span><h1>Pick up where you left off.</h1><p>See what you have archived, search the knowledge inside it, and move from lecture to evidence to hands-on work without sending your course library elsewhere.</p></div>
+        <a class="ci-button" href="/">Archive new material</a>
+      </section>
+
+      <section class="ci-grid ci-grid-4" aria-label="Library statistics">
+        <article class="ci-card ci-stat"><strong id="home-course-count">—</strong><span>Archived courses</span></article>
+        <article class="ci-card ci-stat"><strong id="home-lesson-count">—</strong><span>Indexed lessons</span></article>
+        <article class="ci-card ci-stat"><strong id="home-transcript-count">—</strong><span>Transcript variants</span></article>
+        <article class="ci-card ci-stat"><strong id="home-storage">—</strong><span>Local storage used</span></article>
+      </section>
+
+      <section class="ci-section">
+        <div class="ci-section-head"><div><h2>Continue learning</h2><p>Recent and incomplete lessons from your local library.</p></div><a href="/learn">Open Course Intelligence →</a></div>
+        <div id="continue-learning" class="ci-grid ci-grid-3"><div class="ci-empty">Loading learning progress…</div></div>
+      </section>
+
+      <section class="ci-section ci-grid ci-grid-2">
+        <div>
+          <div class="ci-section-head"><div><h2>Knowledge search</h2><p>Search source transcripts across the full library.</p></div></div>
+          <article class="ci-card ci-card-pad">
+            <label for="home-search" class="ci-sr-only">Search across transcripts</label>
+            <input id="home-search" class="ci-search" type="search" placeholder="Search every transcript…" autocomplete="off" />
+            <div id="home-search-results" class="ci-list" style="margin-top:12px" aria-live="polite"></div>
+          </article>
+        </div>
+        <div>
+          <div class="ci-section-head"><div><h2>System status</h2><p>Useful local runtime signals, without exposing secrets.</p></div></div>
+          <article class="ci-card ci-card-pad"><div id="system-status" class="ci-list"><div class="ci-list-row"><span>Checking local services…</span></div></div></article>
+        </div>
+      </section>
+
+      <section class="ci-section">
+        <div class="ci-section-head"><div><h2>Course library</h2><p>Your archived courses and transcript coverage.</p></div></div>
+        <div id="home-courses" class="ci-grid ci-grid-3"><div class="ci-empty">Indexing library…</div></div>
+      </section>
+
+      <section class="ci-section ci-privacy"><span>●</span><div><strong>Local-first by design.</strong><br />Archived files and personal notes stay on your configured storage unless you explicitly configure a remote feature. Generated study material is expected to cite lecture evidence.</div></section>
+    </main>
+  </div>
+  <script src="/static/os.js" type="module"></script>
+  <script src="/static/home.js" type="module"></script>
+</body>
+</html>

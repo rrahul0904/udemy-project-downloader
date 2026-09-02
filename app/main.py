@@ -133,6 +133,22 @@ async def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/home")
+@app.get("/library")
+async def library_home() -> FileResponse:
+    return FileResponse(STATIC_DIR / "home.html")
+
+
+@app.get("/files-ui")
+async def files_workspace() -> FileResponse:
+    return FileResponse(STATIC_DIR / "files.html")
+
+
+@app.get("/settings")
+async def settings_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "settings.html")
+
+
 @app.get("/lab")
 async def study_lab() -> FileResponse:
     return FileResponse(STATIC_DIR / "lab.html")

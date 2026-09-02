@@ -1,159 +1,67 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Study Lab · Course Intelligence</title>
-    <link rel="stylesheet" href="/static/lab.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <a class="brand" href="/lab">
-        <span class="brand-mark" aria-hidden="true">SL</span>
-        <span>
-          <strong>Study Lab</strong>
-          <small>Local course + research workbench</small>
-        </span>
-      </a>
-      <nav aria-label="Primary">
-        <a href="/">Downloader</a>
-        <a href="/learn">Course Intelligence</a>
-        <a class="active" href="/lab" aria-current="page">Study Lab</a>
-      </nav>
-    </header>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Work · Study Lab · Course Intelligence OS</title>
+  <link rel="stylesheet" href="/static/lab.css" />
+  <link rel="stylesheet" href="/static/os.css" />
+  <link rel="stylesheet" href="/static/lab-os.css" />
+</head>
+<body>
+<div class="ci-shell">
+  <header class="ci-topbar">
+    <a class="ci-brand" href="/home"><span class="ci-brand-mark">CI</span><span class="ci-brand-copy"><strong>Course Intelligence OS</strong><small>Study Lab · local scientific workbench</small></span></a>
+    <nav class="ci-mode-nav" aria-label="Primary"><a data-mode-link="home" href="/home">Library</a><a data-mode-link="acquire" href="/">Acquire</a><a data-mode-link="learn" href="/learn">Learn</a><a data-mode-link="work" href="/lab">Work</a><a data-mode-link="files" href="/files-ui">Files</a></nav>
+    <div class="ci-top-actions"><a class="ci-icon-button" data-mode-link="settings" href="/settings" aria-label="Settings">⚙</a><button class="ci-icon-button" data-theme-toggle type="button">◐</button></div>
+  </header>
 
-    <main class="shell">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">LOCAL-FIRST LEARNING WORKBENCH</p>
-          <h1>Turn downloaded course material into a working STEM lab.</h1>
-          <p class="lede">
-            Explore data, statistics, scientific formats, citations, equations, molecular files,
-            simulations, and study utilities without uploading your course files to a third-party service.
-          </p>
-        </div>
-        <div class="hero-card">
-          <strong>Course material bridge</strong>
-          <p>Load compatible files already stored by the downloader directly into the active tool.</p>
-          <label for="course-file">Downloaded file</label>
-          <select id="course-file">
-            <option value="">Loading compatible files…</option>
-          </select>
-          <button id="load-course-file" type="button" disabled>Load into active tool</button>
-          <p id="course-file-status" class="status" role="status"></p>
-        </div>
-      </section>
+  <main class="lab-page">
+    <section class="lab-hero">
+      <div><span class="ci-eyebrow">WORK · LOCAL-FIRST STUDY LAB</span><h1>Work directly with the material you are learning.</h1><p>Move from lecture evidence into statistics, plots, molecular formats, citations, equations, simulations, and practical study utilities without uploading your course files to a new service.</p><div class="ci-privacy"><span>●</span><div><strong>Local-first tools.</strong> Core calculations run in browser JavaScript. A compatible downloaded file is loaded only when you explicitly choose it.</div></div></div>
+      <div class="lab-bridge"><span class="ci-badge orange">Course material bridge</span><h2 style="margin:12px 0 5px">Use an archived file</h2><p style="margin:0">Select a compatible application-managed file and load it into the active tool.</p><label for="course-file">Downloaded file</label><select id="course-file"><option value="">Loading compatible files…</option></select><button id="load-course-file" type="button" disabled>Load into active tool</button><p id="course-file-status" class="status" role="status"></p></div>
+    </section>
 
-      <section class="catalog-head">
-        <div>
-          <p class="eyebrow">TOOL CATALOG</p>
-          <h2>21 local tools in one workspace</h2>
-        </div>
-        <label class="search">
-          <span class="sr-only">Search tools</span>
-          <input id="tool-search" type="search" placeholder="Search statistics, BibTeX, PDB, units…" />
-        </label>
-      </section>
+    <section class="catalog-head"><div><span class="ci-eyebrow">TOOL CATALOG</span><h2>21 local tools in one workspace</h2><p class="ci-muted" style="margin:4px 0 0">Search by task or filter by category.</p></div><label class="search"><span class="ci-sr-only">Search tools</span><input id="tool-search" type="search" placeholder="Search statistics, BibTeX, PDB, units…" /></label></section>
+    <div class="tool-filters" role="group" aria-label="Filter Study Lab tools"><button class="tool-filter active" data-filter="all" type="button">All 21</button><button class="tool-filter" data-filter="data" type="button">Data</button><button class="tool-filter" data-filter="molecular" type="button">Molecular</button><button class="tool-filter" data-filter="writing" type="button">Writing</button><button class="tool-filter" data-filter="units" type="button">Units</button><button class="tool-filter" data-filter="study" type="button">Study</button></div>
+    <div id="recent-tools" class="ci-list" aria-live="polite" style="margin-bottom:14px"></div>
 
-      <section id="tool-grid" class="tool-grid" aria-label="Study Lab tools">
-        <article class="tool-card" data-tool="statistics" data-search="statistics calculator mean median standard deviation quartiles data">
-          <span class="tag">Data</span><h3>Statistics Calculator</h3><p>Descriptive statistics for pasted numeric data.</p><button data-open="statistics">Open</button>
-        </article>
-        <article class="tool-card" data-tool="cleaner" data-search="data cleaner csv whitespace deduplicate missing values">
-          <span class="tag">Data</span><h3>Data Cleaner</h3><p>Normalize rows, trim cells, remove blanks, and deduplicate.</p><button data-open="cleaner">Open</button>
-        </article>
-        <article class="tool-card" data-tool="outliers" data-search="outlier detector iqr z score statistics">
-          <span class="tag">Data</span><h3>Outlier Detector</h3><p>Flag values with IQR or z-score rules.</p><button data-open="outliers">Open</button>
-        </article>
-        <article class="tool-card" data-tool="curve" data-search="curve fitter linear regression slope intercept r squared">
-          <span class="tag">Data</span><h3>Curve Fitter</h3><p>Fit a linear model and visualize the result.</p><button data-open="curve">Open</button>
-        </article>
-        <article class="tool-card" data-tool="errorbars" data-search="error bar generator standard deviation sem confidence interval grouped">
-          <span class="tag">Data</span><h3>Error-Bar Generator</h3><p>Group observations and compute SD, SEM, and 95% CI.</p><button data-open="errorbars">Open</button>
-        </article>
-        <article class="tool-card" data-tool="plot" data-search="plot builder scatter line chart x y svg">
-          <span class="tag">Data</span><h3>Plot Builder</h3><p>Create lightweight scatter or line plots from x/y pairs.</p><button data-open="plot">Open</button>
-        </article>
-        <article class="tool-card" data-tool="digitizer" data-search="plot digitizer image graph coordinates manual">
-          <span class="tag">Data</span><h3>Plot Digitizer</h3><p>Upload a plot image and manually capture approximate coordinates.</p><button data-open="digitizer">Open</button>
-        </article>
+    <section id="tool-grid" class="tool-grid" aria-label="Study Lab tools">
+      <article class="tool-card" data-category="data" data-tool="statistics" data-search="statistics calculator mean median standard deviation quartiles data"><span class="tag">Data</span><h3>Statistics Calculator</h3><p>Descriptive statistics for pasted numeric data.</p><button data-open="statistics">Open</button></article>
+      <article class="tool-card" data-category="data" data-tool="cleaner" data-search="data cleaner csv whitespace deduplicate missing values"><span class="tag">Data</span><h3>Data Cleaner</h3><p>Normalize rows, trim cells, remove blanks, and deduplicate.</p><button data-open="cleaner">Open</button></article>
+      <article class="tool-card" data-category="data" data-tool="outliers" data-search="outlier detector iqr z score statistics"><span class="tag">Data</span><h3>Outlier Detector</h3><p>Flag values with IQR or z-score rules.</p><button data-open="outliers">Open</button></article>
+      <article class="tool-card" data-category="data" data-tool="curve" data-search="curve fitter linear regression slope intercept r squared"><span class="tag">Data</span><h3>Curve Fitter</h3><p>Fit a linear model and visualize the result.</p><button data-open="curve">Open</button></article>
+      <article class="tool-card" data-category="data" data-tool="errorbars" data-search="error bar generator standard deviation sem confidence interval grouped"><span class="tag">Data</span><h3>Error-Bar Generator</h3><p>Group observations and compute SD, SEM, and 95% CI.</p><button data-open="errorbars">Open</button></article>
+      <article class="tool-card" data-category="data" data-tool="plot" data-search="plot builder scatter line chart x y svg"><span class="tag">Data</span><h3>Plot Builder</h3><p>Create lightweight scatter or line plots from x/y pairs.</p><button data-open="plot">Open</button></article>
+      <article class="tool-card" data-category="data" data-tool="digitizer" data-search="plot digitizer image graph coordinates manual"><span class="tag">Data</span><h3>Plot Digitizer</h3><p>Upload a plot image and manually capture approximate coordinates.</p><button data-open="digitizer">Open</button></article>
 
-        <article class="tool-card" data-tool="xvg" data-search="xvg visualizer gromacs molecular dynamics plot">
-          <span class="tag purple">Molecular</span><h3>XVG Visualizer</h3><p>Parse common GROMACS XVG output and chart a series.</p><button data-open="xvg">Open</button>
-        </article>
-        <article class="tool-card" data-tool="structure" data-search="structure inspector pdb atom residue chain molecular">
-          <span class="tag purple">Molecular</span><h3>Structure Inspector</h3><p>Inspect PDB atom, residue, chain, and bounding-box metadata.</p><button data-open="structure">Open</button>
-        </article>
-        <article class="tool-card" data-tool="coordinates" data-search="coordinate manipulator pdb translate xyz molecular">
-          <span class="tag purple">Molecular</span><h3>Coordinate Manipulator</h3><p>Translate PDB coordinates while preserving fixed-width records.</p><button data-open="coordinates">Open</button>
-        </article>
-        <article class="tool-card" data-tool="workflow" data-search="md workflow generator gromacs lammps plumed molecular dynamics script">
-          <span class="tag purple">Molecular</span><h3>MD Workflow Generator</h3><p>Generate starter scripts for GROMACS, LAMMPS, or PLUMED workflows.</p><button data-open="workflow">Open</button>
-        </article>
+      <article class="tool-card" data-category="molecular" data-tool="xvg" data-search="xvg visualizer gromacs molecular dynamics plot"><span class="tag purple">Molecular</span><h3>XVG Visualizer</h3><p>Parse common GROMACS XVG output and chart a series.</p><button data-open="xvg">Open</button></article>
+      <article class="tool-card" data-category="molecular" data-tool="structure" data-search="structure inspector pdb atom residue chain molecular"><span class="tag purple">Molecular</span><h3>Structure Inspector</h3><p>Inspect PDB atom, residue, chain, and bounding-box metadata.</p><button data-open="structure">Open</button></article>
+      <article class="tool-card" data-category="molecular" data-tool="coordinates" data-search="coordinate manipulator pdb translate xyz molecular"><span class="tag purple">Molecular</span><h3>Coordinate Manipulator</h3><p>Translate PDB coordinates while preserving fixed-width records.</p><button data-open="coordinates">Open</button></article>
+      <article class="tool-card" data-category="molecular" data-tool="workflow" data-search="md workflow generator gromacs lammps plumed molecular dynamics script"><span class="tag purple">Molecular</span><h3>MD Workflow Generator</h3><p>Generate starter scripts for GROMACS, LAMMPS, or PLUMED workflows.</p><button data-open="workflow">Open</button></article>
 
-        <article class="tool-card" data-tool="bibtex" data-search="bibtex sanitizer bibliography citations writing">
-          <span class="tag amber">Writing</span><h3>BibTeX Sanitizer</h3><p>Normalize common BibTeX formatting problems.</p><button data-open="bibtex">Open</button>
-        </article>
-        <article class="tool-card" data-tool="bibdedupe" data-search="bibtex deduplicator duplicate doi title citations">
-          <span class="tag amber">Writing</span><h3>BibTeX Deduplicator</h3><p>Remove likely duplicate bibliography entries by DOI or title.</p><button data-open="bibdedupe">Open</button>
-        </article>
-        <article class="tool-card" data-tool="doi" data-search="doi bibtex crossref citation fetcher">
-          <span class="tag amber">Writing</span><h3>DOI → BibTeX</h3><p>Fetch a BibTeX record from Crossref when online.</p><button data-open="doi">Open</button>
-        </article>
-        <article class="tool-card" data-tool="journal" data-search="journal abbreviator iso4 citation title abbreviation">
-          <span class="tag amber">Writing</span><h3>Journal Abbreviator</h3><p>Create a practical title abbreviation using common ISO-style word rules.</p><button data-open="journal">Open</button>
-        </article>
-        <article class="tool-card" data-tool="latextable" data-search="latex table csv tabular writing">
-          <span class="tag amber">Writing</span><h3>LaTeX Table Builder</h3><p>Convert CSV-like rows into a tabular environment.</p><button data-open="latextable">Open</button>
-        </article>
-        <article class="tool-card" data-tool="equation" data-search="equation editor latex math formula">
-          <span class="tag amber">Writing</span><h3>Equation Builder</h3><p>Build reusable display or inline LaTeX equation snippets.</p><button data-open="equation">Open</button>
-        </article>
+      <article class="tool-card" data-category="writing" data-tool="bibtex" data-search="bibtex sanitizer bibliography citations writing"><span class="tag amber">Writing</span><h3>BibTeX Sanitizer</h3><p>Normalize common BibTeX formatting problems.</p><button data-open="bibtex">Open</button></article>
+      <article class="tool-card" data-category="writing" data-tool="bibdedupe" data-search="bibtex deduplicator duplicate doi title citations"><span class="tag amber">Writing</span><h3>BibTeX Deduplicator</h3><p>Remove likely duplicate bibliography entries by DOI or title.</p><button data-open="bibdedupe">Open</button></article>
+      <article class="tool-card" data-category="writing" data-tool="doi" data-search="doi bibtex crossref citation fetcher"><span class="tag amber">Writing</span><h3>DOI → BibTeX</h3><p>Fetch a BibTeX record from Crossref when online.</p><button data-open="doi">Open</button></article>
+      <article class="tool-card" data-category="writing" data-tool="journal" data-search="journal abbreviator iso4 citation title abbreviation"><span class="tag amber">Writing</span><h3>Journal Abbreviator</h3><p>Create a practical title abbreviation using common ISO-style word rules.</p><button data-open="journal">Open</button></article>
+      <article class="tool-card" data-category="writing" data-tool="latextable" data-search="latex table csv tabular writing"><span class="tag amber">Writing</span><h3>LaTeX Table Builder</h3><p>Convert CSV-like rows into a tabular environment.</p><button data-open="latextable">Open</button></article>
+      <article class="tool-card" data-category="writing" data-tool="equation" data-search="equation editor latex math formula"><span class="tag amber">Writing</span><h3>Equation Builder</h3><p>Build reusable display or inline LaTeX equation snippets.</p><button data-open="equation">Open</button></article>
 
-        <article class="tool-card" data-tool="units" data-search="scientific converter units energy length pressure temperature spectroscopy">
-          <span class="tag green">Units</span><h3>Scientific Converter</h3><p>Convert common scientific length, energy, pressure, and temperature units.</p><button data-open="units">Open</button>
-        </article>
+      <article class="tool-card" data-category="units" data-tool="units" data-search="scientific converter units energy length pressure temperature spectroscopy"><span class="tag green">Units</span><h3>Scientific Converter</h3><p>Convert common scientific length, energy, pressure, and temperature units.</p><button data-open="units">Open</button></article>
 
-        <article class="tool-card" data-tool="pomodoro" data-search="pomodoro timer focus study workflow helper">
-          <span class="tag slate">Study</span><h3>Pomodoro Timer</h3><p>Run a local focus/break timer while studying.</p><button data-open="pomodoro">Open</button>
-        </article>
-        <article class="tool-card" data-tool="decision" data-search="decision matrix weighted options score workflow">
-          <span class="tag slate">Study</span><h3>Decision Matrix</h3><p>Score alternatives with simple numeric criteria.</p><button data-open="decision">Open</button>
-        </article>
-        <article class="tool-card" data-tool="kinetics" data-search="kinetics sandbox first order reaction rate concentration half life">
-          <span class="tag slate">Study</span><h3>Kinetics Sandbox</h3><p>Explore first-order concentration decay and half-life.</p><button data-open="kinetics">Open</button>
-        </article>
-      </section>
+      <article class="tool-card" data-category="study" data-tool="pomodoro" data-search="pomodoro timer focus study workflow helper"><span class="tag slate">Study</span><h3>Pomodoro Timer</h3><p>Run a local focus/break timer while studying.</p><button data-open="pomodoro">Open</button></article>
+      <article class="tool-card" data-category="study" data-tool="decision" data-search="decision matrix weighted options score workflow"><span class="tag slate">Study</span><h3>Decision Matrix</h3><p>Score alternatives with simple numeric criteria.</p><button data-open="decision">Open</button></article>
+      <article class="tool-card" data-category="study" data-tool="kinetics" data-search="kinetics sandbox first order reaction rate concentration half life"><span class="tag slate">Study</span><h3>Kinetics Sandbox</h3><p>Explore first-order concentration decay and half-life.</p><button data-open="kinetics">Open</button></article>
+    </section>
 
-      <section id="workspace" class="workspace" aria-live="polite">
-        <aside class="workspace-side">
-          <p class="eyebrow">ACTIVE TOOL</p>
-          <h2 id="workspace-title">Choose a tool</h2>
-          <p id="workspace-description">Open any tool above to begin. Compatible downloaded files can be loaded into text-based tools.</p>
-          <button id="clear-state" class="ghost" type="button">Clear active tool</button>
-        </aside>
-        <section id="tool-panel" class="tool-panel">
-          <div class="empty-state">
-            <strong>No tool open yet.</strong>
-            <p>Your inputs stay in this browser session unless you explicitly download or copy them.</p>
-          </div>
-        </section>
-      </section>
+    <section id="workspace" class="workspace" aria-live="polite"><aside class="workspace-side"><span class="ci-eyebrow">ACTIVE TOOL</span><h2 id="workspace-title">Choose a tool</h2><p id="workspace-description">Open a tool above to begin. Compatible downloaded files can be loaded into text-based tools.</p><button id="clear-state" class="ghost" type="button">Clear active tool</button></aside><section id="tool-panel" class="tool-panel"><div class="empty-state"><strong>No tool open yet.</strong><p>Your inputs stay in this browser session unless you explicitly download or copy them.</p></div></section></section>
 
-      <section class="notes">
-        <h2>Design principles</h2>
-        <div class="note-grid">
-          <article><strong>Local-first</strong><p>Core calculations run in browser JavaScript. Course material is not sent to a new application backend.</p></article>
-          <article><strong>Course-aware</strong><p>Compatible files from the downloader can be loaded directly into the current analysis tool.</p></article>
-          <article><strong>Reproducible</strong><p>Tools expose copyable text, tables, equations, scripts, and transformed data instead of opaque results.</p></article>
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <p>Study Lab is an independent integration inspired by the MIT-licensed STEMKit project. See repository notices for attribution and scope.</p>
-    </footer>
-
-    <script src="/static/lab.js" type="module"></script>
-  </body>
+    <section class="notes"><h2>Why Study Lab belongs here</h2><div class="note-grid"><article><strong>Local-first</strong><p>Core calculations run in browser JavaScript and course files stay inside the application-managed archive boundary.</p></article><article><strong>Course-aware</strong><p>Compatible files from the downloader can be loaded directly into the current tool instead of re-uploading them elsewhere.</p></article><article><strong>Reproducible</strong><p>Tools expose copyable data, equations, scripts, tables, and transformed text instead of opaque results.</p></article></div></section>
+  </main>
+  <footer><p>Study Lab is an independent integration inspired by the MIT-licensed STEMKit project. See repository notices for attribution and current scientific-parity scope.</p></footer>
+</div>
+<script src="/static/os.js" type="module"></script>
+<script src="/static/lab.js" type="module"></script>
+<script src="/static/lab-ui.js" type="module"></script>
+</body>
 </html>

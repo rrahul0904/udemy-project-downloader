@@ -10,6 +10,8 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .database import CourseStore
+from .study_service import StudyService
+from .study_store import ARTIFACT_KINDS, StudyStore
 from .transcript_export import SUPPORTED_EXPORT_FORMATS, export_transcript
 
 
@@ -18,8 +20,21 @@ class ProgressPayload(BaseModel):
     completed: bool = False
 
 
+class ArtifactGeneratePayload(BaseModel):
+    transcript_id: str | None = Field(default=None, max_length=64)
+
+
+class GroundedChatPayload(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    lesson_id: str | None = Field(default=None, max_length=64)
+    course_id: str | None = Field(default=None, max_length=64)
+    limit: int = Field(default=8, ge=1, le=20)
+
+
 def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["course-intelligence-v1"])
+    study_store = StudyStore(store.path)
+    study = StudyService(store, study_store)
 
     @router.get("/courses")
     async def courses() -> dict[str, Any]:
@@ -41,7 +56,6 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
             payload = await asyncio.to_thread(store.lesson, lesson_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="Lesson not found.") from exc
-        # API callers receive relative media/attachment paths only. The guarded /files route remains the file boundary.
         return payload
 
     @router.get("/lessons/{lesson_id}/progress")
@@ -57,6 +71,54 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
             return await asyncio.to_thread(store.put_progress, lesson_id, payload.last_position_ms, payload.completed)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="Lesson not found.") from exc
+
+    @router.get("/lessons/{lesson_id}/artifacts")
+    async def lesson_artifacts(lesson_id: str, kind: str | None = None) -> dict[str, Any]:
+        try:
+            store.lesson(lesson_id)
+            items = await asyncio.to_thread(study_store.artifacts, lesson_id, kind)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Lesson not found.") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"lesson_id": lesson_id, "artifacts": items, "count": len(items)}
+
+    @router.post("/lessons/{lesson_id}/artifacts/{kind}")
+    async def generate_artifact(
+        lesson_id: str,
+        kind: str,
+        payload: ArtifactGeneratePayload | None = None,
+    ) -> dict[str, Any]:
+        if kind not in ARTIFACT_KINDS:
+            raise HTTPException(status_code=400, detail="Unsupported study artifact kind.")
+        try:
+            return await asyncio.to_thread(
+                study.generate,
+                lesson_id,
+                kind,
+                payload.transcript_id if payload else None,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Lesson or transcript not found.") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @router.get("/artifacts/{artifact_id}")
+    async def artifact(artifact_id: str) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(study_store.artifact, artifact_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Study artifact not found.") from exc
+
+    @router.post("/chat")
+    async def grounded_chat(payload: GroundedChatPayload) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            study.grounded_evidence,
+            payload.question,
+            lesson_id=payload.lesson_id,
+            course_id=payload.course_id,
+            limit=payload.limit,
+        )
 
     @router.get("/transcripts/{transcript_id}")
     async def transcript(transcript_id: str) -> dict[str, Any]:

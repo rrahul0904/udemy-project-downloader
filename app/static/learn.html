@@ -1,107 +1,69 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Course Intelligence · Local Media Downloader</title>
-    <link rel="stylesheet" href="/static/learn.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <a class="brand" href="/learn">
-        <span class="brand-mark">CI</span>
-        <span><strong>Course Intelligence</strong><small>Local transcript-backed learning</small></span>
-      </a>
-      <nav aria-label="Primary">
-        <a href="/">Downloader</a>
-        <a class="active" href="/learn" aria-current="page">Course Intelligence</a>
-        <a href="/lab">Study Lab</a>
-      </nav>
-    </header>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Learn · Course Intelligence OS</title>
+  <link rel="stylesheet" href="/static/learn.css" />
+  <link rel="stylesheet" href="/static/os.css" />
+  <link rel="stylesheet" href="/static/learn-os.css" />
+</head>
+<body>
+<div class="ci-shell">
+  <header class="ci-topbar">
+    <a class="ci-brand" href="/home"><span class="ci-brand-mark">CI</span><span class="ci-brand-copy"><strong>Course Intelligence OS</strong><small>Source-grounded learning workspace</small></span></a>
+    <nav class="ci-mode-nav" aria-label="Primary"><a data-mode-link="home" href="/home">Library</a><a data-mode-link="acquire" href="/">Acquire</a><a data-mode-link="learn" href="/learn">Learn</a><a data-mode-link="work" href="/lab">Work</a><a data-mode-link="files" href="/files-ui">Files</a></nav>
+    <div class="ci-top-actions"><a class="ci-icon-button" data-mode-link="settings" href="/settings" aria-label="Settings">⚙</a><button class="ci-icon-button" data-theme-toggle type="button">◐</button></div>
+  </header>
 
-    <main class="shell">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">COURSE → TRANSCRIPT → KNOWLEDGE</p>
-          <h1>Turn archived lessons into a searchable study workspace.</h1>
-          <p>
-            Course Intelligence discovers downloaded transcripts, indexes them with SQLite FTS,
-            connects matching local media, and keeps notes, bookmarks, and progress durably on the server.
-          </p>
+  <main class="learn-page">
+    <section class="learn-hero"><div><span class="ci-eyebrow">LEARN · COURSE → TRANSCRIPT → KNOWLEDGE</span><h1>Course Intelligence</h1><p>Search archived lessons, read source transcripts, keep private notes, bookmark exact lecture moments, and generate deterministic source-cited study material from the transcript itself.</p></div><div class="learn-stats" aria-live="polite"><div class="stat-chip"><strong id="course-count">0</strong><span>courses</span></div><div class="stat-chip"><strong id="lesson-count">0</strong><span>lessons</span></div><div class="stat-chip"><strong>SQLite</strong><span>durable state</span></div></div></section>
+
+    <section class="workspace-grid">
+      <aside class="library-panel">
+        <div class="panel-head"><div><span class="ci-eyebrow">LIBRARY</span><h2>Your courses</h2></div><button id="refresh-library" class="ghost" type="button">Refresh</button></div>
+        <label class="search"><span class="ci-sr-only">Filter courses and lessons</span><input id="lesson-filter" type="search" placeholder="Filter courses…" /></label>
+        <label class="search"><span class="ci-sr-only">Search all transcripts</span><input id="library-search" type="search" placeholder="Search across transcripts…" /></label>
+        <div id="library-search-results" class="library-search-results" aria-live="polite"></div>
+        <div id="library" class="library" aria-live="polite"><p class="muted">Indexing downloaded transcripts…</p></div>
+      </aside>
+
+      <section class="lesson-panel">
+        <div id="empty-state" class="empty-state"><span class="ci-eyebrow">SELECT A LESSON</span><h2>Your transcript is the source of truth.</h2><p>Choose a lesson or search the full library. Timestamped variants open in the synchronized viewer; generated study material remains tied to transcript evidence.</p></div>
+        <div id="lesson-workspace" hidden>
+          <div class="lesson-head"><div><span class="ci-eyebrow" id="lesson-course">COURSE</span><h2 id="lesson-title">Lesson</h2><p class="ci-muted" style="margin:6px 0 0">Personal notes stay separate from generated study artifacts.</p></div><div class="actions"><button id="export-notes" class="ghost" type="button">Export my notes</button><a id="open-media" class="button-link" href="#" hidden>Open synced viewer</a></div></div>
+          <div class="lesson-meta" id="lesson-meta"></div>
+          <div class="tabbar" role="tablist" aria-label="Lesson workspace">
+            <button class="tab active" data-tab="overview" role="tab">Overview</button>
+            <button class="tab" data-tab="transcript" role="tab">Transcript</button>
+            <button class="tab" data-tab="ai-notes" role="tab">AI Notes</button>
+            <button class="tab" data-tab="flashcards" role="tab">Flashcards</button>
+            <button class="tab" data-tab="quiz" role="tab">Quiz</button>
+            <button class="tab" data-tab="concept-map" role="tab">Concept Map</button>
+            <button class="tab" data-tab="ask-course" role="tab">Ask Course</button>
+            <button class="tab" data-tab="notes" role="tab">My Notes</button>
+            <button class="tab" data-tab="bookmarks" role="tab">Bookmarks</button>
+            <button class="tab" data-tab="files" role="tab">Files</button>
+          </div>
+
+          <section id="tab-overview" class="tab-panel"><div id="lesson-overview" class="artifact-grid"><div class="ci-empty">Lesson overview will appear here.</div></div></section>
+          <section id="tab-transcript" class="tab-panel" hidden><div class="transcript-toolbar"><label class="search grow"><span class="ci-sr-only">Search transcript</span><input id="transcript-search" type="search" placeholder="Search this transcript…" /></label><span id="search-count" class="muted"></span></div><div id="transcript" class="transcript"></div></section>
+          <section id="tab-ai-notes" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Source-grounded study notes</h3><p>Generated locally from transcript segments. Every bullet includes lecture evidence.</p></div><button class="generate-button" data-generate="notes" type="button">Generate notes</button></div><div id="ai-notes-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No generated notes yet.</div></div></section>
+          <section id="tab-flashcards" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Flashcards</h3><p>Questions and answers are derived from cited source segments.</p></div><button class="generate-button" data-generate="flashcards" type="button">Generate cards</button></div><div id="flashcards-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No flashcard deck yet.</div></div></section>
+          <section id="tab-quiz" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Quiz</h3><p>Mixed multiple-choice and short-answer practice with cited explanations.</p></div><button class="generate-button" data-generate="quiz" type="button">Generate quiz</button></div><div id="quiz-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No quiz yet.</div></div></section>
+          <section id="tab-concept-map" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Concept map</h3><p>Transcript concepts and co-occurrence relationships, each retaining source evidence.</p></div><button class="generate-button" data-generate="concept_map" type="button">Generate map</button></div><div id="concept-map-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No concept map yet.</div></div></section>
+          <section id="tab-ask-course" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Ask Course</h3><p><span class="ci-badge cyan">COURSE_GROUNDED</span> Answers only from matching transcript evidence. No outside model knowledge is silently added.</p></div></div><form id="ask-course-form" class="ask-box"><input id="ask-course-input" type="search" maxlength="2000" placeholder="Where does this lesson explain…?" required /><button class="generate-button" type="submit">Find evidence</button></form><div id="ask-course-result" class="ask-result" aria-live="polite"></div></section>
+          <section id="tab-notes" class="tab-panel" hidden><div class="ci-privacy" style="margin-bottom:12px"><span>●</span><div><strong>My Notes are private writing.</strong> Generated study material will never overwrite your personal notes.</div></div><textarea id="lesson-notes" rows="18" maxlength="262144" placeholder="Write your own notes, key takeaways, questions, or study plan…"></textarea><div class="note-actions"><button id="save-notes" type="button">Save notes</button><span id="note-status" class="muted" role="status"></span></div></section>
+          <section id="tab-bookmarks" class="tab-panel" hidden><p class="muted">Bookmarks are durable source anchors. Select one to return to the matching transcript timestamp.</p><div id="bookmark-list" class="bookmark-list"></div></section>
+          <section id="tab-files" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Lesson and course files</h3><p>Open downloaded materials or hand them to Study Lab when the file type is compatible.</p></div><a class="ci-button-secondary" href="/lab" style="text-decoration:none">Open Study Lab</a></div><div id="lesson-files" class="files-list"><div class="ci-empty">No indexed attachments for this lesson/course.</div></div></section>
         </div>
-        <div class="stats" aria-live="polite">
-          <div><strong id="course-count">0</strong><span>courses</span></div>
-          <div><strong id="lesson-count">0</strong><span>lessons</span></div>
-          <div><strong>Durable</strong><span>SQLite state</span></div>
-        </div>
       </section>
-
-      <section class="workspace-grid">
-        <aside class="library-panel">
-          <div class="panel-head">
-            <div><p class="eyebrow">LIBRARY</p><h2>Your courses</h2></div>
-            <button id="refresh-library" class="ghost" type="button">Refresh</button>
-          </div>
-          <label class="search"><span class="sr-only">Filter lessons</span><input id="lesson-filter" type="search" placeholder="Filter course list…" /></label>
-          <label class="search"><span class="sr-only">Search all transcripts</span><input id="library-search" type="search" placeholder="Search across every transcript…" /></label>
-          <div id="library-search-results" class="library-search-results" aria-live="polite"></div>
-          <div id="library" class="library" aria-live="polite"><p class="muted">Indexing downloaded transcripts…</p></div>
-        </aside>
-
-        <section class="lesson-panel">
-          <div id="empty-state" class="empty-state">
-            <p class="eyebrow">SELECT A LESSON</p>
-            <h2>Your transcript becomes the source of truth.</h2>
-            <p>Choose a lesson or search across the full library. Timestamped variants can be opened in the synchronized source viewer; TXT and Markdown remain searchable plain text.</p>
-          </div>
-
-          <div id="lesson-workspace" hidden>
-            <div class="lesson-head">
-              <div><p class="eyebrow" id="lesson-course">COURSE</p><h2 id="lesson-title">Lesson</h2></div>
-              <div class="actions">
-                <button id="export-notes" class="ghost" type="button">Export notes</button>
-                <a id="open-media" class="button-link" href="#" hidden>Open synced viewer</a>
-              </div>
-            </div>
-
-            <div class="lesson-meta" id="lesson-meta"></div>
-
-            <div class="tabbar" role="tablist" aria-label="Lesson tools">
-              <button class="tab active" data-tab="transcript" role="tab">Transcript</button>
-              <button class="tab" data-tab="notes" role="tab">Notes</button>
-              <button class="tab" data-tab="bookmarks" role="tab">Bookmarks</button>
-            </div>
-
-            <section id="tab-transcript" class="tab-panel">
-              <div class="transcript-toolbar">
-                <label class="search grow"><span class="sr-only">Search transcript</span><input id="transcript-search" type="search" placeholder="Search this transcript…" /></label>
-                <span id="search-count" class="muted"></span>
-              </div>
-              <div id="transcript" class="transcript"></div>
-            </section>
-
-            <section id="tab-notes" class="tab-panel" hidden>
-              <p class="muted">Personal notes are stored separately from generated study artifacts and survive browser/application restarts.</p>
-              <textarea id="lesson-notes" rows="18" maxlength="262144" placeholder="Write your own notes, key takeaways, questions, or study plan…"></textarea>
-              <div class="note-actions"><button id="save-notes" type="button">Save notes</button><span id="note-status" class="muted" role="status"></span></div>
-            </section>
-
-            <section id="tab-bookmarks" class="tab-panel" hidden>
-              <p class="muted">Bookmarks are stored durably and link back to transcript timestamps.</p>
-              <div id="bookmark-list" class="bookmark-list"></div>
-            </section>
-          </div>
-        </section>
-      </section>
-
-      <section class="roadmap-strip">
-        <article><strong>Model v2</strong><span>Course/section/lesson hierarchy + transcript variants/provenance + attachments</span></article>
-        <article><strong>Source viewer</strong><span>Embedded playback + synchronized transcript + exports + durable progress</span></article>
-        <article><strong>Next learning wave</strong><span>Cited notes, flashcards, quizzes, concept maps, grounded tutor and mastery</span></article>
-      </section>
-    </main>
-
-    <script src="/static/learn.js" type="module"></script>
-    <script src="/static/learn-viewer-link.js" type="module"></script>
-  </body>
+    </section>
+  </main>
+</div>
+<script src="/static/os.js" type="module"></script>
+<script src="/static/learn.js" type="module"></script>
+<script src="/static/learn-viewer-link.js" type="module"></script>
+<script src="/static/learn-study.js" type="module"></script>
+</body>
 </html>
