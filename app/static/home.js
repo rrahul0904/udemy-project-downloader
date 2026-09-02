@@ -95,7 +95,9 @@ async function init() {
   ]);
   const lessons = flattenLessons(library);
   const transcriptCount = lessons.reduce((sum, item) => sum + (item.lesson.transcripts?.length || (item.lesson.transcript_path ? 1 : 0)), 0);
-  const used = downloads.usage?.used ?? downloads.usage?.total - downloads.usage?.free ?? 0;
+  const usage = downloads.usage || {};
+  const directUsed = Number(usage.used);
+  const used = Number.isFinite(directUsed) ? directUsed : Math.max(0, Number(usage.total || 0) - Number(usage.free || 0));
   document.querySelector('#home-course-count').textContent = library.course_count ?? (library.courses || []).length;
   document.querySelector('#home-lesson-count').textContent = library.lesson_count ?? lessons.length;
   document.querySelector('#home-transcript-count').textContent = transcriptCount;
