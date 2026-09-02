@@ -14,9 +14,10 @@ print('SQLite FTS5: ok')
 PY
 
 if command -v node >/dev/null 2>&1; then
-  node --check app/static/app.js
-  node --check app/static/lab.js
-  node --check app/static/learn.js
+  for asset in app/static/*.js; do
+    echo "Checking ${asset}"
+    node --check "${asset}"
+  done
 else
   echo 'Node is unavailable; JavaScript syntax checks were not run.' >&2
   exit 1
