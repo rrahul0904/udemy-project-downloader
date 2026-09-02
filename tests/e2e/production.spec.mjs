@@ -3,24 +3,28 @@ import { test, expect } from '@playwright/test';
 test('Course Intelligence OS navigation connects Library Acquire Learn Work Files and Settings', async ({ page }) => {
   await page.goto('/home');
   await expect(page.getByRole('heading', { name: /Pick up where you left off/i })).toBeVisible();
+  let primary = page.getByRole('navigation', { name: 'Primary' });
   for (const name of ['Library', 'Acquire', 'Learn', 'Work', 'Files']) {
-    await expect(page.getByRole('link', { name, exact: true })).toBeVisible();
+    await expect(primary.getByRole('link', { name, exact: true })).toBeVisible();
   }
 
-  await page.getByRole('link', { name: 'Acquire', exact: true }).click();
+  await primary.getByRole('link', { name: 'Acquire', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: /Archive course material/i })).toBeVisible();
   await expect(page.getByText('I am authorized to archive this content for local personal use.')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Learn', exact: true }).click();
+  primary = page.getByRole('navigation', { name: 'Primary' });
+  await primary.getByRole('link', { name: 'Learn', exact: true }).click();
   await expect(page).toHaveURL(/\/learn/);
   await expect(page.getByRole('heading', { name: 'Course Intelligence', exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Work', exact: true }).click();
+  primary = page.getByRole('navigation', { name: 'Primary' });
+  await primary.getByRole('link', { name: 'Work', exact: true }).click();
   await expect(page).toHaveURL(/\/lab$/);
   await expect(page.getByText('Statistics Calculator', { exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Files', exact: true }).click();
+  primary = page.getByRole('navigation', { name: 'Primary' });
+  await primary.getByRole('link', { name: 'Files', exact: true }).click();
   await expect(page).toHaveURL(/\/files-ui$/);
   await expect(page.getByRole('heading', { name: 'Downloaded files' })).toBeVisible();
 
@@ -52,7 +56,7 @@ test('course intelligence persists personal notes and bookmarks and keeps ground
 
   await page.getByRole('tab', { name: 'AI Notes', exact: true }).click();
   await page.getByRole('button', { name: /Generate notes|Regenerate/ }).click();
-  await expect(page.locator('#ai-notes-content')).toContainText('Cited study notes');
+  await expect(page.locator('#ai-notes-content')).toContainText('SQLite FTS5');
   await expect(page.locator('#ai-notes-content').locator('.source-citation').first()).toBeVisible();
 
   await page.getByRole('tab', { name: 'Ask Course', exact: true }).click();
