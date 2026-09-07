@@ -79,7 +79,7 @@ jobs:
 
       - name: Preserve acceptance persistence marker
         if: ${{ !inputs.verify_persistence && inputs.authorized_test_url != '' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-acceptance-state
           path: production-acceptance-state.json
