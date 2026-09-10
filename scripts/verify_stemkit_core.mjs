@@ -6,6 +6,10 @@ import * as Slurm from '../app/static/vendor/stemkit-core/slurm.js';
 import * as Units from '../app/static/vendor/stemkit-core/units.js';
 import * as Latex from '../app/static/vendor/stemkit-core/latex.js';
 import * as Digitizer from '../app/static/vendor/stemkit-core/digitizer.js';
+import * as Journals from '../app/static/vendor/stemkit-core/journals.js';
+import * as Iso4 from '../app/static/vendor/stemkit-core/iso4.js';
+import * as Plumed from '../app/static/vendor/stemkit-core/plumed.js';
+import * as Selection from '../app/static/vendor/stemkit-core/selection.js';
 
 const xvg = Xvg.parseXvg('@ title "RMSD"\n0 0.1\n1 0.2\n');
 assert.equal(xvg.rowCount, 2);
@@ -61,5 +65,10 @@ const slurm = Slurm.generateScript({
 });
 assert.match(slurm.script, /#SBATCH/);
 assert.match(slurm.script, /study_lab_smoke/);
+
+assert.equal(typeof Journals.normKey, 'function');
+assert.equal(typeof Iso4.parseLTWA, 'function');
+assert.equal(Plumed.versionAtLeast('2.9', '2.8'), true);
+assert.equal(Selection.distance({x:0,y:0,z:0}, {x:3,y:4,z:0}), 5);
 
 console.log('Vendored STEMKit no-dependency core smoke: ok');
