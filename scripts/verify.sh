@@ -14,10 +14,11 @@ print('SQLite FTS5: ok')
 PY
 
 if command -v node >/dev/null 2>&1; then
-  for asset in app/static/*.js; do
+  while IFS= read -r -d '' asset; do
     echo "Checking ${asset}"
     node --check "${asset}"
-  done
+  done < <(find app/static -type f -name '*.js' -print0)
+  node scripts/verify_stemkit_core.mjs
 else
   echo 'Node is unavailable; JavaScript syntax checks were not run.' >&2
   exit 1
