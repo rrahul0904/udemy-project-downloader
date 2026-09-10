@@ -14,6 +14,10 @@ Vendored in the first parity wave:
 - units.js
 - latex.js
 - digitizer.js
+- journals.js
+- iso4.js
+- plumed.js
+- selection.js
 
 These modules were selected first because the upstream core documents them as having no third-party runtime dependency. They are kept as an attributed vendor layer so Course Intelligence can use the same tested computational behavior rather than maintaining simplified reimplementations.
 
