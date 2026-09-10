@@ -36,8 +36,8 @@ assert.match(Structure.formatPDB(moved), /ATOM/);
 
 const matrix = Latex.parseTableData('Group,Mean\nControl,12.3');
 assert.equal(matrix.length, 2);
-assert.match(Latex.generateLatexTable(matrix), /\\\\begin\{table\}/);
-assert.match(Latex.generateLatexTable(matrix), /\\\\toprule/);
+assert.match(Latex.generateLatexTable(matrix), /\\begin\{table\}/);
+assert.match(Latex.generateLatexTable(matrix), /\\toprule/);
 
 const calibration = {
   pxX1: 0, pxX2: 100,
