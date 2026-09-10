@@ -29,10 +29,10 @@ The upstream core is composed of ES modules with no DOM dependency. A barrel mod
 | bibtex | 848 | bibtex-parse-js | parsing, union-find dedupe, sanitization | simplified local version remains |
 | digitizer | 338 | none | calibrated pixel-to-data mapping and exports | vendored + wired for coordinate mapping |
 | error-bars | 423 | jStat | group summaries, CI, Holm pairwise comparisons | simplified local version remains |
-| journals | 281 | none | journal title rule engine | not yet wired |
-| iso4 | 675 | none | LTWA parsing and ISO-4 abbreviation | heuristic local version remains |
-| plumed | 529 | none | version-aware PLUMED generation and validation | starter text only today |
-| selection | 570 | none | atom-selection language and spatial queries | missing from Study Lab |
+| journals | 281 | none | journal title rule engine | vendored; UI wiring pending |
+| iso4 | 675 | none | LTWA parsing and ISO-4 abbreviation | vendored; LTWA dataset/UI wiring pending |
+| plumed | 529 | none | version-aware PLUMED generation and validation | vendored; UI wiring pending |
+| selection | 570 | none | atom-selection language and spatial queries | vendored; structure UI wiring pending |
 
 The upstream project documents 1,077 tests across its 16 domain modules, with numerical fixtures validated against SciPy, NumPy, scipy.constants, and physical invariants.
 
@@ -69,14 +69,14 @@ Course Intelligence
 ### Phase A — dependency-free core
 Status: **in progress**
 
-Vendored: XVG, structure, SLURM, units, LaTeX, digitizer. The Study Lab now calls upstream functions for XVG analysis, PDB structure analysis/translation, scientific conversion, LaTeX table generation, and digitizer coordinate mapping.
+Vendored: XVG, structure, SLURM, units, LaTeX, digitizer, journals, ISO-4, PLUMED, and atom selection. The Study Lab now calls upstream functions for XVG analysis, PDB structure analysis/translation, scientific conversion, LaTeX table generation, and digitizer coordinate mapping.
 
 Next in the same phase:
 - expose full structure file-format support (PDB/GRO/XYZ);
 - add rotation/centering/scaling and format conversion;
 - add calibrated/log-axis digitizer UI and resolution reporting;
 - replace starter MD workflow text with a proper SLURM surface;
-- add journals, ISO-4, PLUMED, and selection modules (also dependency-free).
+- wire journals/ISO-4, PLUMED, and atom-selection modules into Study Lab surfaces and provide the LTWA data source.
 
 ### Phase B — injected analytical core
 Status: **not started**
