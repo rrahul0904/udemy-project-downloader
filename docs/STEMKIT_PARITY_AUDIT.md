@@ -1,76 +1,44 @@
-# STEMKit Scientific Parity Audit
+# STEMKit Parity Audit
 
-Date: 2026-09-01
+## Current boundary
 
-Reference: `LD-Shell/stemkit` current public `main`, especially `README.md`, `src/core/README.md`, `src/core/*`, tests, CHANGELOG, LICENSE and THIRD_PARTY_LICENSES.
+Course Intelligence Study Lab is migrating from lightweight local scientific implementations to the MIT-licensed STEMKit core through thin browser adapters. This audit tracks what is safe to claim at the current PR head and what remains deferred.
 
-## Scope
+## Certified in this PR
 
-The current Course Intelligence Study Lab represents the same 18 research-tool concepts plus the three workflow helpers, but this is not a claim of numerical or scientific equivalence.
-
-The upstream project currently documents a 16-module DOM-free `@stemkit/core` and 1,077 tests. Its architecture is valuable because browser UI, headless scripts and tests all use the same computational code path.
-
-## Current parity classification
-
-| Area | Current implementation | Status | Next fidelity work |
+| Surface | Core status | Browser status | Certification |
 | --- | --- | --- | --- |
-| Statistics | descriptive statistics-focused browser implementation | PARTIAL | Welch/Student t tests, ANOVA, correlation, non-parametrics, assumptions, CIs, effect sizes |
-| Outliers | z-score and IQR workflows | PARTIAL | modified z, Grubbs, stronger fixtures |
-| Curve fitting | primarily linear OLS | PARTIAL | polynomial/exponential/log/power, fit diagnostics, residuals, linearization warnings |
-| Error bars | mean/SD/SEM/approximate CI | PARTIAL | grouped inference, configurable CIs, multiplicity correction |
-| XVG | lightweight numeric parsing/plot | PARTIAL | metadata, multiple datasets, legends, Grace/PLUMED semantics |
-| Structure | lightweight PDB inspection | PARTIAL | PDB/GRO/XYZ, molecular weight, COM, Rg, rotations, conversions |
-| Coordinates/selections | translation-oriented manipulation | PARTIAL | rotation, centering, alignment, selections, neighbor queries |
-| MD/HPC | starter GROMACS/LAMMPS/PLUMED text | PARTIAL | SLURM generation, validation, version-aware warnings |
-| BibTeX | basic sanitize/dedupe | PARTIAL | real parser, robust merge/dedupe, escaping, union-style grouping |
-| ISO-4 | small heuristic dictionary | PARTIAL | reproducible comprehensive abbreviation data/algorithm where licensing permits |
-| LaTeX | basic table/snippet generation | PARTIAL | broader escaping, alignment/booktabs, richer equation rendering |
-| Units | common subset | PARTIAL | broader dimensional catalog with traceable constants |
-| Digitizer | manual image-coordinate workflow | PARTIAL | calibrated axes, log axes, data mapping, export |
-| Plotting | lightweight SVG | PARTIAL | richer series/axes/export/publication controls |
-| Pomodoro/decision/kinetics | functional workflow helpers | FUNCTIONAL_EQUIVALENT for basic workflows | preferences/weights/sensitivity/reaction models are enhancements |
+| XVG | vendored | wired | deterministic parser/sample-statistics golden fixture + browser runtime |
+| Structure | vendored | PDB stats + translation wired | mass/geometry/translation/PDB round-trip golden fixture |
+| Units | vendored | wired | exact scale + CODATA-backed golden fixture + browser runtime |
+| LaTeX | vendored | table builder wired | escaping/table golden fixture |
+| Digitizer | vendored | calibrated adapter wired | linear/log calibration, validation, resolution golden fixture + browser lifecycle |
+| SLURM | vendored | pending | module smoke only |
+| Journals | vendored | pending | module smoke only |
+| ISO-4 | vendored | pending | module smoke only; LTWA data/UI pending |
+| PLUMED | vendored | pending | module smoke only |
+| Selection | vendored | pending | module smoke only |
 
-## Engineering gap
+Canonical verification recursively syntax-checks JavaScript below `app/static`, runs the no-dependency STEMKit smoke suite, and runs the deterministic scientific golden suite. Playwright covers browser-runtime core loading and the calibrated digitizer adapter lifecycle.
 
-The most important Study Lab engineering gap is not another UI page. It is the lack of a reusable DOM-free core shared by browser code and tests.
+## Explicitly deferred
 
-Target shape:
+The following are not merge blockers for the dependency-free foundation and must not be described as complete:
 
-```text
-study-core/
-  statistics.js
-  outliers.js
-  curve-fitting.js
-  error-bars.js
-  xvg.js
-  structure.js
-  selection.js
-  coordinate.js
-  md.js
-  slurm.js
-  plumed.js
-  bibtex.js
-  iso4.js
-  latex.js
-  units.js
-  digitizer.js
-```
+- full PDB/GRO/XYZ structure editing, rotation, centering, scaling, and conversion UI;
+- SLURM, PLUMED, selection, journals, and ISO-4/LTWA Study Lab adapters;
+- dependency-injected statistics, outliers, curve fitting, data cleaning, BibTeX, and error bars;
+- course-aware persistence/provenance workflows for scientific artifacts;
+- removal of simplified algorithms that have not yet been replaced and certified.
 
-The UI should become an adapter to the core. Tests should call the same core directly.
+## Next implementation order
 
-## Validation rule
+1. SLURM adapter: replace starter MD workflow text with validated resource estimates and generated GROMACS/LAMMPS scripts.
+2. PLUMED adapter: version-aware generation and validation, sharing the molecular workflow surface where practical.
+3. Structure + selection vertical: expose GRO/XYZ parsing/conversion and selection/spatial queries together.
+4. Journals + ISO-4: add the LTWA data source and title-abbreviation UI.
+5. Dependency-injected analytical core: introduce the vendor injection boundary before replacing statistical/data-cleaning/BibTeX/error-bar implementations.
 
-Numerical parity tests must use independent references or invariants where practical, for example:
+## Merge claim
 
-- known SciPy/NumPy reference outputs recorded as fixtures
-- published SI/CODATA constants
-- round-trip parser/serializer fixtures
-- rotation distance/orthonormality invariants
-- known molecular mass/center-of-mass fixtures
-- known statistical examples and confidence intervals
-
-Tests must not simply compare the implementation to itself.
-
-## Legal boundary
-
-STEMKit is MIT licensed. Prefer independent implementation. If upstream code is reused, preserve the required MIT copyright/license notices and any third-party license obligations. Do not copy unrelated assets or dependencies merely to increase apparent parity.
+A green exact-head CI run makes this PR suitable to merge as the **dependency-free STEMKit scientific-core foundation with calibrated digitizer and golden certification**. It does not establish full STEMKit feature parity or publication-grade equivalence for the deferred modules.
