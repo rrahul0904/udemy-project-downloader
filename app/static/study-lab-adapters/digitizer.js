@@ -94,14 +94,12 @@ function copyCsv(points) {
 }
 
 export function enhanceDigitizerPanel(panel) {
-  if (!panel || panel.dataset.stemkitDigitizerEnhanced === 'true') return false;
+  if (!panel || panel.querySelector('#stemkit-digitizer-calibration')) return false;
   const originalFile = panel.querySelector('#digitizer-file');
   const originalCanvas = panel.querySelector('#digitizer-canvas');
   const originalClear = panel.querySelector('#clear-digitizer');
   const originalCopy = panel.querySelector('#copy-digitizer');
   if (!originalFile || !originalCanvas || !originalClear || !originalCopy) return false;
-
-  panel.dataset.stemkitDigitizerEnhanced = 'true';
 
   const file = originalFile.cloneNode(true);
   originalFile.replaceWith(file);
@@ -113,6 +111,7 @@ export function enhanceDigitizerPanel(panel) {
   originalCopy.replaceWith(copyButton);
 
   const calibrationUi = document.createElement('div');
+  calibrationUi.id = 'stemkit-digitizer-calibration';
   calibrationUi.className = 'digitizer-calibration';
   calibrationUi.innerHTML = `
     <p class="status"><strong>Calibrated axes.</strong> Enter the pixel columns/rows corresponding to the numeric axis endpoints. The dashed box shows the active plot region.</p>
