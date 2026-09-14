@@ -17,17 +17,17 @@ The upstream core is composed of ES modules with no DOM dependency. A barrel mod
 | Module | Approx. lines | Runtime dependency | Main responsibility | Current Course Intelligence state |
 | --- | ---: | --- | --- | --- |
 | vendor | 135 | host/injection layer | jStat, PapaParse, regression, BibTeX adapter | not ported yet |
-| xvg-parser | 397 | none | XVG/PLUMED parsing, series stats, Python export | vendored + wired |
+| xvg-parser | 397 | none | XVG/PLUMED parsing, series stats, Python export | vendored + wired + golden certified |
 | statistics | 870 | jStat | descriptive stats, tests, ANOVA, correlation, non-parametrics, assumptions | simplified local version remains |
 | outliers | 353 | jStat | z, modified-z, IQR, Grubbs | simplified local version remains |
 | curve-fitting | 504 | regression.js | multiple fit models, adequacy, residuals, exports | simplified linear fit remains |
-| structure | 1109 | none | PDB/GRO/XYZ, mass, COM, Rg, rotations, conversion | vendored + wired for PDB/translation/stats |
+| structure | 1109 | none | PDB/GRO/XYZ, mass, COM, Rg, rotations, conversion | vendored + wired for PDB/translation/stats + golden certified |
 | slurm | 454 | none | validated GROMACS/LAMMPS SLURM scripts and resource estimates | vendored; UI wiring pending |
-| units | 407 | none | 64 units / 10 categories, CODATA/SI conversions | vendored + wired |
+| units | 407 | none | 64 units / 10 categories, CODATA/SI conversions | vendored + wired + golden certified |
 | data-cleaning | 553 | PapaParse | typed parsing, cleaning, imputation, profiling | simplified local version remains |
-| latex | 339 | none | LaTeX/Markdown tables, matrices, escaping | vendored + wired for tables |
+| latex | 339 | none | LaTeX/Markdown tables, matrices, escaping | vendored + wired for tables + golden certified |
 | bibtex | 848 | bibtex-parse-js | parsing, union-find dedupe, sanitization | simplified local version remains |
-| digitizer | 338 | none | calibrated pixel-to-data mapping and exports | vendored + wired for coordinate mapping |
+| digitizer | 338 | none | calibrated pixel-to-data mapping and exports | vendored + calibrated browser adapter + golden certified |
 | error-bars | 423 | jStat | group summaries, CI, Holm pairwise comparisons | simplified local version remains |
 | journals | 281 | none | journal title rule engine | vendored; UI wiring pending |
 | iso4 | 675 | none | LTWA parsing and ISO-4 abbreviation | vendored; LTWA dataset/UI wiring pending |
@@ -64,17 +64,24 @@ Course Intelligence
         └── parity smoke/golden tests
 ```
 
+The first concrete adapter now lives under `app/static/study-lab-adapters/digitizer.js`. It progressively upgrades the existing Study Lab digitizer without moving scientific algorithms back into the UI layer.
+
 ## Phase plan
 
 ### Phase A — dependency-free core
-Status: **in progress**
+Status: **in progress; certification baseline established**
 
 Vendored: XVG, structure, SLURM, units, LaTeX, digitizer, journals, ISO-4, PLUMED, and atom selection. The Study Lab now calls upstream functions for XVG analysis, PDB structure analysis/translation, scientific conversion, LaTeX table generation, and digitizer coordinate mapping.
+
+Completed in the current certification slice:
+- deterministic golden fixtures for XVG parsing/statistics, structure mass/geometry/round-trip behavior, CODATA/SI unit conversions, LaTeX escaping/tables, and digitizer calibration;
+- canonical verification now runs the golden suite and recursively syntax-checks JavaScript below `app/static`;
+- browser-runtime certification for vendored units and XVG behavior;
+- calibrated digitizer adapter with explicit pixel endpoints, linear/log axes, fail-closed validation, pixel-resolution reporting, active calibration region visualization, CSV copy, and reopen lifecycle coverage.
 
 Next in the same phase:
 - expose full structure file-format support (PDB/GRO/XYZ);
 - add rotation/centering/scaling and format conversion;
-- add calibrated/log-axis digitizer UI and resolution reporting;
 - replace starter MD workflow text with a proper SLURM surface;
 - wire journals/ISO-4, PLUMED, and atom-selection modules into Study Lab surfaces and provide the LTWA data source.
 
