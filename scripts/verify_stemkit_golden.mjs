@@ -1,0 +1,129 @@
+import assert from 'node:assert/strict';
+
+import * as Xvg from '../app/static/vendor/stemkit-core/xvg-parser.js';
+import * as Structure from '../app/static/vendor/stemkit-core/structure.js';
+import * as Units from '../app/static/vendor/stemkit-core/units.js';
+import * as Latex from '../app/static/vendor/stemkit-core/latex.js';
+import * as Digitizer from '../app/static/vendor/stemkit-core/digitizer.js';
+
+function close(actual, expected, tolerance = 1e-10, message = '') {
+  assert.ok(Number.isFinite(actual), `${message || 'value'} should be finite`);
+  assert.ok(
+    Math.abs(actual - expected) <= tolerance,
+    `${message || 'value'}: expected ${expected} ± ${tolerance}, got ${actual}`
+  );
+}
+
+// XVG: deterministic parser/statistics fixture.
+const xvgText = [
+  '@ title "Golden RMSD"',
+  '@ xaxis label "Time (ps)"',
+  '@ yaxis label "RMSD (nm)"',
+  '0 0.10',
+  '1 0.20',
+  '2 0.30'
+].join('\n');
+const xvg = Xvg.parseXvg(xvgText);
+assert.equal(xvg.title, 'Golden RMSD');
+assert.equal(xvg.rowCount, 3);
+assert.deepEqual(Xvg.extractColumn(xvg.matrix, 0), [0, 1, 2]);
+assert.deepEqual(Xvg.extractColumn(xvg.matrix, 1), [0.1, 0.2, 0.3]);
+const xvgStats = Xvg.columnStats(Xvg.extractColumn(xvg.matrix, 1));
+close(xvgStats.mean, 0.2, 1e-12, 'XVG mean');
+close(xvgStats.std, 0.1, 1e-12, 'XVG sample SD');
+
+// Structure: known masses, geometry invariants, translation, and PDB round trip.
+const pdb = [
+  'ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00 20.00           N',
+  'ATOM      2  CA  ALA A   1       2.000   0.000   0.000  1.00 20.00           C'
+].join('\n');
+const parsed = Structure.parsePDB(pdb);
+assert.equal(parsed.atoms.length, 2);
+const stats = Structure.structureStats(parsed.atoms);
+assert.equal(stats.nAtoms, 2);
+assert.equal(stats.nResidues, 1);
+close(stats.totalMass, 14.007 + 12.011, 1e-12, 'molecular mass');
+close(stats.geometricCentre.x, 1, 1e-12, 'geometric centre X');
+close(stats.geometricCentre.y, 0, 1e-12, 'geometric centre Y');
+close(stats.geometricCentre.z, 0, 1e-12, 'geometric centre Z');
+
+const moved = Structure.translateAtoms(parsed.atoms, 3, -2, 5);
+close(moved[0].x, 3, 1e-12, 'translated X');
+close(moved[0].y, -2, 1e-12, 'translated Y');
+close(moved[0].z, 5, 1e-12, 'translated Z');
+const roundTrip = Structure.parsePDB(Structure.formatPDB(moved));
+assert.equal(roundTrip.atoms.length, 2);
+close(roundTrip.atoms[1].x, 5, 1e-3, 'round-trip X');
+close(roundTrip.atoms[1].y, -2, 1e-3, 'round-trip Y');
+close(roundTrip.atoms[1].z, 5, 1e-3, 'round-trip Z');
+
+// Units: exact scale factors and a CODATA-backed conversion.
+assert.equal(Units.convert(1, 'length', 'nm', 'angstrom'), 10);
+assert.equal(Units.convert(10, 'length', 'angstrom', 'nm'), 1);
+assert.equal(Units.convert(1, 'pressure', 'bar', 'pa'), 100000);
+close(Units.convert(1, 'energy', 'hartree', 'ev'), 27.211386245988, 1e-12, 'Hartree to eV');
+
+// LaTeX: deterministic table generation and escaping.
+const matrix = Latex.parseTableData('Group,Mean\nA&B,12.3');
+assert.deepEqual(matrix, [['Group', 'Mean'], ['A&B', '12.3']]);
+const table = Latex.generateLatexTable(matrix, {
+  environment: 'table',
+  style: 'booktabs',
+  align: 'l',
+  headerRow: true
+});
+assert.match(table, /\\begin\{table\}/);
+assert.match(table, /\\toprule/);
+assert.match(table, /A\\&B/);
+assert.match(table, /12\.3/);
+
+// Digitizer: offset calibration, inverted image Y, logarithmic axes, resolution,
+// and fail-closed invalid calibration behavior.
+const linear = {
+  pxX1: 100, pxX2: 500,
+  pxY1: 420, pxY2: 20,
+  valX1: 0, valX2: 20,
+  valY1: 0, valY2: 100,
+  logX: false, logY: false
+};
+assert.equal(Digitizer.validateCalibration(linear).valid, true);
+const linearPoint = Digitizer.toDataCoordinates(300, 220, linear);
+close(linearPoint.x, 10, 1e-12, 'digitizer linear X');
+close(linearPoint.y, 50, 1e-12, 'digitizer inverted Y');
+const resolution = Digitizer.pixelResolution(linear);
+close(resolution.dx, 0.05, 1e-12, 'digitizer X resolution');
+close(resolution.dy, 0.25, 1e-12, 'digitizer Y resolution');
+
+const logarithmic = {
+  pxX1: 0, pxX2: 200,
+  pxY1: 200, pxY2: 0,
+  valX1: 1, valX2: 100,
+  valY1: 1, valY2: 10000,
+  logX: true, logY: true
+};
+assert.equal(Digitizer.validateCalibration(logarithmic).valid, true);
+const logPoint = Digitizer.toDataCoordinates(100, 100, logarithmic);
+close(logPoint.x, 10, 1e-10, 'digitizer log X');
+close(logPoint.y, 100, 1e-9, 'digitizer log Y');
+
+const invalid = Digitizer.validateCalibration({
+  pxX1: 10, pxX2: 10,
+  pxY1: 0, pxY2: 100,
+  valX1: 1, valX2: 10,
+  valY1: 0, valY2: 1,
+  logX: false, logY: false
+});
+assert.equal(invalid.valid, false);
+assert.ok(invalid.errors.some(error => /share a pixel column/i.test(error)));
+
+const invalidLog = Digitizer.validateCalibration({
+  pxX1: 0, pxX2: 100,
+  pxY1: 0, pxY2: 100,
+  valX1: 0, valX2: 10,
+  valY1: 1, valY2: 100,
+  logX: true, logY: true
+});
+assert.equal(invalidLog.valid, false);
+assert.ok(invalidLog.errors.some(error => /logarithmic X axis/i.test(error)));
+
+console.log('STEMKit scientific golden fixtures: ok');
