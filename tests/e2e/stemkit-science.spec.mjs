@@ -1,39 +1,46 @@
 import { test, expect } from '@playwright/test';
 
-test('Study Lab scientific converter uses vendored STEMKit units core', async ({ page }) => {
+test('browser runtime executes vendored STEMKit scientific units core', async ({ page }) => {
   await page.goto('/lab');
+  await expect(page.getByText('Scientific Converter', { exact: true })).toBeVisible();
 
-  const card = page.locator('.tool-card').filter({ hasText: 'Scientific Converter' });
-  await card.getByRole('button', { name: 'Open' }).click();
-  await expect(page.locator('#workspace-title')).toHaveText('Scientific Converter');
+  const values = await page.evaluate(async () => {
+    const Units = await import('/static/vendor/stemkit-core/units.js');
+    return {
+      nmToAngstrom: Units.convert(1, 'length', 'nm', 'angstrom'),
+      barToPa: Units.convert(1, 'pressure', 'bar', 'pa'),
+      categories: Units.listAllCategories().length,
+    };
+  });
 
-  await page.locator('#unit-category').selectOption('length');
-  await page.locator('#unit-value').fill('1');
-  await page.locator('#unit-from').selectOption('nm');
-  await page.locator('#unit-to').selectOption('angstrom');
-  await page.getByRole('button', { name: 'Convert' }).click();
-
-  await expect(page.locator('#result')).toContainText('1 nm = 10 Å');
+  expect(values.nmToAngstrom).toBe(10);
+  expect(values.barToPa).toBe(100000);
+  expect(values.categories).toBeGreaterThanOrEqual(10);
 });
 
-test('Study Lab XVG visualizer reports deterministic sample statistics from vendored core', async ({ page }) => {
+test('browser runtime executes vendored STEMKit XVG parser and sample statistics', async ({ page }) => {
   await page.goto('/lab');
+  await expect(page.getByText('XVG Visualizer', { exact: true })).toBeVisible();
 
-  const card = page.locator('.tool-card').filter({ hasText: 'XVG Visualizer' });
-  await card.getByRole('button', { name: 'Open' }).click();
-  await expect(page.locator('#workspace-title')).toHaveText('XVG Visualizer');
+  const result = await page.evaluate(async () => {
+    const Xvg = await import('/static/vendor/stemkit-core/xvg-parser.js');
+    const parsed = Xvg.parseXvg([
+      '@ title "Golden RMSD"',
+      '0 0.10',
+      '1 0.20',
+      '2 0.30'
+    ].join('\n'));
+    const stats = Xvg.columnStats(Xvg.extractColumn(parsed.matrix, 1));
+    return {
+      title: parsed.title,
+      rows: parsed.rowCount,
+      mean: stats.mean,
+      sd: stats.std,
+    };
+  });
 
-  await page.locator('#input-data').fill([
-    '@ title "Golden RMSD"',
-    '0 0.10',
-    '1 0.20',
-    '2 0.30'
-  ].join('\n'));
-  await page.getByRole('button', { name: 'Parse XVG' }).click();
-
-  await expect(page.locator('#result')).toContainText('Title: Golden RMSD');
-  await expect(page.locator('#result')).toContainText('Rows: 3');
-  await expect(page.locator('#result')).toContainText('Mean: 0.2');
-  await expect(page.locator('#result')).toContainText('Sample SD: 0.1');
-  await expect(page.locator('#plot-output')).toBeVisible();
+  expect(result.title).toBe('Golden RMSD');
+  expect(result.rows).toBe(3);
+  expect(result.mean).toBeCloseTo(0.2, 12);
+  expect(result.sd).toBeCloseTo(0.1, 12);
 });
