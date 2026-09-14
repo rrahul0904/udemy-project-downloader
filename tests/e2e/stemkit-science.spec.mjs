@@ -44,3 +44,25 @@ test('browser runtime executes vendored STEMKit XVG parser and sample statistics
   expect(result.mean).toBeCloseTo(0.2, 12);
   expect(result.sd).toBeCloseTo(0.1, 12);
 });
+
+test('Plot Digitizer exposes calibrated axes, validation, log controls, and survives reopen', async ({ page }) => {
+  await page.goto('/lab');
+
+  const digitizer = page.locator('.tool-card').filter({ hasText: 'Plot Digitizer' });
+  await digitizer.getByRole('button', { name: 'Open' }).click();
+  await expect(page.locator('#stemkit-digitizer-calibration')).toBeVisible();
+  await expect(page.locator('#digitizer-log-x')).toBeVisible();
+  await expect(page.locator('#digitizer-log-y')).toBeVisible();
+  await expect(page.locator('#result')).toContainText('Pixel resolution:');
+
+  await page.locator('#digitizer-px-x2').fill('0');
+  await expect(page.locator('#result')).toContainText('Calibration error:');
+
+  const units = page.locator('.tool-card').filter({ hasText: 'Scientific Converter' });
+  await units.getByRole('button', { name: 'Open' }).click();
+  await expect(page.locator('#workspace-title')).toHaveText('Scientific Converter');
+
+  await digitizer.getByRole('button', { name: 'Open' }).click();
+  await expect(page.locator('#stemkit-digitizer-calibration')).toBeVisible();
+  await expect(page.locator('#stemkit-digitizer-calibration')).toHaveCount(1);
+});
