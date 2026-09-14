@@ -6,6 +6,6 @@
     "check:js": "node --check app/static/app.js && node --check app/static/lab.js && node --check app/static/learn.js && node --check app/static/learn-viewer-link.js && node --check app/static/viewer.js"
   },
   "devDependencies": {
-    "@playwright/test": "1.62.1"
+    "@playwright/test": "1.63.0"
   }
 }
