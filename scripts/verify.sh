@@ -14,10 +14,14 @@ print('SQLite FTS5: ok')
 PY
 
 if command -v node >/dev/null 2>&1; then
+  for asset in app/static/*.js; do
+    echo "Checking ${asset}"
+    node --check "${asset}"
+  done
   while IFS= read -r -d '' asset; do
     echo "Checking ${asset}"
     node --check "${asset}"
-  done < <(find app/static -type f -name '*.js' -print0)
+  done < <(find app/static -mindepth 2 -type f -name '*.js' -print0)
   node scripts/verify_stemkit_core.mjs
   node scripts/verify_stemkit_golden.mjs
 else
