@@ -16,7 +16,7 @@ The upstream core is composed of ES modules with no DOM dependency. A barrel mod
 
 | Module | Approx. lines | Runtime dependency | Main responsibility | Current Course Intelligence state |
 | --- | ---: | --- | --- | --- |
-| vendor | 135 | host/injection layer | jStat, PapaParse, regression, BibTeX adapter | not ported yet |
+| vendor | 135 | host/injection layer | jStat, PapaParse, regression, BibTeX adapter | next phase |
 | xvg-parser | 397 | none | XVG/PLUMED parsing, series stats, Python export | vendored + wired + golden certified |
 | statistics | 870 | jStat | descriptive stats, tests, ANOVA, correlation, non-parametrics, assumptions | simplified local version remains |
 | outliers | 353 | jStat | z, modified-z, IQR, Grubbs | simplified local version remains |
@@ -29,8 +29,8 @@ The upstream core is composed of ES modules with no DOM dependency. A barrel mod
 | bibtex | 848 | bibtex-parse-js | parsing, union-find dedupe, sanitization | simplified local version remains |
 | digitizer | 338 | none | calibrated pixel-to-data mapping and exports | vendored + calibrated browser adapter + golden certified |
 | error-bars | 423 | jStat | group summaries, CI, Holm pairwise comparisons | simplified local version remains |
-| journals | 281 | none | journal title rule engine | vendored; UI wiring pending |
-| iso4 | 675 | none | LTWA parsing and ISO-4 abbreviation | vendored; LTWA dataset/UI wiring pending |
+| journals | 281 | none | journal title rule engine | vendored + browser adapter + golden certified |
+| iso4 | 675 | none | LTWA parsing and ISO-4 abbreviation | vendored + local-LTWA browser adapter + synthetic golden certified |
 | plumed | 529 | none | version-aware PLUMED generation and validation | vendored + browser adapter + golden certified |
 | selection | 570 | none | atom-selection language and spatial queries | vendored + structure inspector adapter + golden certified |
 
@@ -44,7 +44,8 @@ The upstream project documents 1,077 tests across its 16 domain modules, with nu
 4. **Scientific precision is tested.** Tail probabilities, standardized moments, PDB element inference, CODATA factors, geometry invariants, and round-trip formats have dedicated regression coverage.
 5. **Structure handling is much deeper than our first implementation.** Upstream supports PDB/GRO/XYZ, mass-aware geometry, triclinic cells, format conversion, rotation, centering, scaling, box validation, and element inference.
 6. **Selection is a reusable scientific language, not a UI filter.** It supports named biochemical groups, attribute matching, ranges, negation, union, residue expansion, unit-aware spatial `within:` queries, and contact search through a spatial grid.
-7. **Study Lab should become an adapter over a versioned scientific core.** UI code should collect inputs/render outputs; it should not own numerical algorithms.
+7. **ISO-4 is data-driven.** The algorithm can be MIT-licensed while the LTWA data has separate terms; keeping the engine vendored and the LTWA input user-supplied preserves that licensing boundary.
+8. **Study Lab should become an adapter over a versioned scientific core.** UI code should collect inputs/render outputs; it should not own numerical algorithms.
 
 ## Target architecture
 
@@ -58,48 +59,45 @@ Course Intelligence
     │   ├── slurm.js
     │   ├── plumed.js
     │   ├── structure.js
+    │   ├── journal.js
     │   ├── data.js               Phase B
-    │   └── writing.js            Phase A/B
+    │   └── writing.js            Phase B
     └── vendor/stemkit-core/
         ├── dependency-free upstream modules
         ├── injected dependent modules
-        ├── upstream MIT license + notice
+        ├── upstream MIT license + notices
         └── parity smoke/golden tests
 ```
 
-The thin-adapter pattern is implemented by digitizer, SLURM, PLUMED, and structure/selection. Interaction/rendering belongs to adapters while scientific parsing, geometry, selection, validation, units, and script generation remain in the vendored core.
+The thin-adapter pattern is implemented by digitizer, SLURM, PLUMED, structure/selection, and journal/ISO-4. Interaction/rendering belongs to adapters while scientific parsing, geometry, selection, validation, units, abbreviation, and script generation remain in the vendored core.
 
 ## Phase plan
 
 ### Phase A — dependency-free core
-Status: **in progress; scientific/HPC foundation largely certified**
+Status: **implemented; awaiting/maintaining exact-head CI certification**
 
 Vendored: XVG, structure, SLURM, units, LaTeX, digitizer, journals, ISO-4, PLUMED, and atom selection.
 
-Completed in the current certification slices:
-- deterministic golden fixtures for XVG parsing/statistics, structure mass/geometry/round-trip behavior, selection semantics, CODATA/SI unit conversions, LaTeX escaping/tables, digitizer calibration, SLURM generation/resource estimates, and PLUMED CV/bias/version behavior;
+Completed:
+- deterministic golden fixtures for XVG parsing/statistics, structure mass/geometry/round-trip behavior, selection semantics, CODATA/SI unit conversions, LaTeX escaping/tables, digitizer calibration, SLURM generation/resource estimates, PLUMED CV/bias/version behavior, journal whole-title matching, and ISO-4 LTWA parsing/abbreviation;
 - canonical verification runs the golden suites and recursively syntax-checks JavaScript below `app/static` while preserving the historical top-level syntax-gate contract;
 - browser-runtime certification for vendored units and XVG behavior;
 - calibrated digitizer adapter with explicit pixel endpoints, linear/log axes, fail-closed validation, pixel-resolution reporting, active calibration region visualization, CSV copy, and reopen lifecycle coverage;
 - GROMACS/LAMMPS SLURM adapter with engine-specific resource topology, arrays, memory/wall-time warnings, checkpoint-aware GROMACS commands, and core-hour estimates;
 - version-aware PLUMED adapter covering PLUMED 2.9/2.10, CV construction, rational switching functions, metadynamics/OPES/restraints/walls, MOLINFO/UNITS/PRINT, and explicit fallback warnings;
-- PDB/GRO/XYZ Structure Inspector and Coordinate Manipulator adapter with selection expressions, named groups, spatial queries, residue expansion, centering, rotation, scaling, translation, and unit-aware format conversion.
-
-Next in the same phase:
-- wire journals/ISO-4 with a legally appropriate LTWA data source and clearly distinguish authoritative ISO-4 data from heuristic rules.
+- PDB/GRO/XYZ Structure Inspector and Coordinate Manipulator adapter with selection expressions, named groups, spatial queries, residue expansion, centering, rotation, scaling, translation, and unit-aware format conversion;
+- Journal Abbreviator adapter using STEMKit whole-title matching plus an ISO-4 path driven only by a user-supplied LTWA file; no restricted LTWA dataset is bundled.
 
 ### Phase B — injected analytical core
-Status: **not started**
+Status: **next**
 
 Bring in the upstream vendor layer plus license-compatible dependencies and wire:
-- statistics;
-- outliers;
-- curve fitting;
-- data cleaning;
-- BibTeX;
-- error bars.
+- jStat 1.9.6 for statistics, outliers, and error bars;
+- regression.js 2.0.1 for curve fitting;
+- Papa Parse 5.4.1 for data cleaning;
+- the upstream BibTeX parser build with its version caveat preserved for BibTeX parsing/deduplication.
 
-Do not call this complete until the upstream-style fixtures pass in our CI/runtime.
+Do not call this complete until the upstream-style fixtures pass in our CI/runtime and the corresponding simplified local implementations have been removed or become fallback-only by explicit design.
 
 ### Phase C — course-aware scientific workflows
 Status: **not started**
