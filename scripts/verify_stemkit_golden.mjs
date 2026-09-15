@@ -6,6 +6,7 @@ import * as Units from '../app/static/vendor/stemkit-core/units.js';
 import * as Latex from '../app/static/vendor/stemkit-core/latex.js';
 import * as Digitizer from '../app/static/vendor/stemkit-core/digitizer.js';
 import * as Slurm from '../app/static/vendor/stemkit-core/slurm.js';
+import * as Plumed from '../app/static/vendor/stemkit-core/plumed.js';
 
 function close(actual, expected, tolerance = 1e-10, message = '') {
   assert.ok(Number.isFinite(actual), `${message || 'value'} should be finite`);
@@ -166,5 +167,81 @@ const invalidWalltime = Slurm.generateScript({
 });
 assert.match(invalidWalltime.script, /#SBATCH --time=24:00:00/);
 assert.ok(invalidWalltime.warnings.some(item => /Wall time looks malformed/.test(item.message)));
+
+// PLUMED: deterministic CV generation, version fallback, bias ordering, and warnings.
+const plumedCatalogue = {
+  DISTANCE: {
+    fields: [
+      { k: 'ATOMS', type: 'atoms', def: '1,2', required: true },
+      { k: 'NOPBC', type: 'flag', def: false },
+    ],
+  },
+  TORSION: {
+    fields: [{ k: 'ATOMS', type: 'atoms', def: '1,2,3,4', required: true }],
+  },
+  COORDINATION: {
+    fields: [
+      { k: 'GROUPA', type: 'atoms', def: '1-10', required: true },
+      { k: 'GROUPB', type: 'atoms', def: '11-20' },
+      { k: 'SWITCH', type: 'text', def: '' },
+      { k: 'NL_CUTOFF', type: 'num', def: '' },
+    ],
+  },
+  DIHEDRAL_CORRELATION: {
+    minVersion: '2.10',
+    fallback: 'DIHCOR',
+    fields: [{ k: 'ATOMS', type: 'atoms', def: '1,2,3,4,5,6,7,8', required: true }],
+  },
+};
+const switchBlock = Plumed.buildSwitchBlock({ r0: 0.3, dmax: 1.0 });
+assert.equal(switchBlock.block, '{RATIONAL R_0=0.3 D_MAX=1}');
+assert.deepEqual(switchBlock.warnings, []);
+
+const plumedConfig = {
+  cvs: [
+    { type: 'DISTANCE', label: 'd1', values: { ATOMS: '1,2' }, bias: true },
+    { type: 'TORSION', label: 'phi', values: { ATOMS: '5,7,9,15' }, bias: true },
+  ],
+  biasMethod: 'wt_metad',
+  biasParams: {
+    sigma: '0.05,0.35',
+    gridMin: '0,-pi',
+    gridMax: '2,pi',
+    gridBin: '200,200',
+  },
+  catalogue: plumedCatalogue,
+  version: '2.9',
+  units: { length: 'nm', energy: 'kj/mol', time: 'ps' },
+  molinfo: { structure: 'ref.pdb', moltype: 'protein' },
+  printStride: 250,
+  printFile: 'COLVAR',
+};
+const plumed = Plumed.generatePlumedInput(plumedConfig);
+assert.deepEqual(plumed.warnings, []);
+assert.equal(plumed.cvLines.length, 2);
+assert.ok(plumed.input.indexOf('d1: DISTANCE ATOMS=1,2') < plumed.input.indexOf('METAD'));
+assert.ok(plumed.input.indexOf('METAD') < plumed.input.indexOf('PRINT'));
+assert.match(plumed.input, /UNITS LENGTH=nm ENERGY=kj\/mol TIME=ps/);
+assert.match(plumed.input, /MOLINFO STRUCTURE=ref\.pdb MOLTYPE=protein/);
+assert.match(plumed.input, /PRINT ARG=d1,phi,metad\.bias STRIDE=250 FILE=COLVAR/);
+
+const fallbackCv = Plumed.buildCVLine(
+  { type: 'DIHEDRAL_CORRELATION', label: 'corr', values: { ATOMS: '1,2,3,4,5,6,7,8' } },
+  plumedCatalogue,
+  { version: '2.9' }
+);
+assert.match(fallbackCv.line, /corr: DIHCOR/);
+assert.equal(fallbackCv.usedFallback, true);
+assert.ok(fallbackCv.warnings.some(message => /older action name/.test(message)));
+
+const malformedBias = Plumed.generatePlumedInput({
+  cvs: [{ type: 'DISTANCE', label: 'd1', values: { ATOMS: '1,2' }, bias: true }],
+  biasMethod: 'wt_metad',
+  biasParams: {},
+  catalogue: plumedCatalogue,
+  version: '2.10',
+});
+assert.ok(malformedBias.warnings.some(message => /SIGMA/.test(message)));
+assert.ok(malformedBias.warnings.some(message => /GRID_MIN/.test(message)));
 
 console.log('STEMKit scientific golden fixtures: ok');
