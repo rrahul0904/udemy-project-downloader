@@ -9,7 +9,8 @@ Course Intelligence Study Lab is migrating from lightweight local scientific imp
 | Surface | Core status | Browser status | Certification |
 | --- | --- | --- | --- |
 | XVG | vendored | wired | deterministic parser/sample-statistics golden fixture + browser runtime |
-| Structure | vendored | PDB stats + translation wired | mass/geometry/translation/PDB round-trip golden fixture |
+| Structure | vendored | PDB/GRO/XYZ inspector + transform adapter wired | mass/geometry/selection/format-conversion golden fixture + browser lifecycle |
+| Selection | vendored | wired into Structure Inspector | attribute/named-group/residue/spatial-query golden fixture + browser selection flow |
 | Units | vendored | wired | exact scale + CODATA-backed golden fixture + browser runtime |
 | LaTeX | vendored | table builder wired | escaping/table golden fixture |
 | Digitizer | vendored | calibrated adapter wired | linear/log calibration, validation, resolution golden fixture + browser lifecycle |
@@ -17,16 +18,13 @@ Course Intelligence Study Lab is migrating from lightweight local scientific imp
 | PLUMED | vendored | version-aware adapter wired | CV/bias/version-fallback golden fixture + browser generation lifecycle |
 | Journals | vendored | pending | module smoke only |
 | ISO-4 | vendored | pending | module smoke only; LTWA data/UI pending |
-| Selection | vendored | pending | module smoke only |
 
-Canonical verification keeps the historical top-level frontend syntax gate, recursively syntax-checks nested JavaScript below `app/static`, runs the no-dependency STEMKit smoke suite, and runs deterministic scientific golden fixtures. Playwright covers browser-runtime core loading, the calibrated digitizer adapter lifecycle, and PLUMED target-version generation.
+Canonical verification keeps the historical top-level frontend syntax gate, recursively syntax-checks nested JavaScript below `app/static`, runs the no-dependency STEMKit smoke suite, and runs deterministic scientific golden fixtures. Playwright covers browser-runtime core loading, digitizer calibration, PLUMED target-version generation, structure selection/conversion, and coordinate transformation.
 
 ## Explicitly deferred
 
 The following are not merge blockers for the dependency-free foundation and must not be described as complete:
 
-- full PDB/GRO/XYZ structure editing, rotation, centering, scaling, and conversion UI;
-- selection/spatial-query Study Lab adapter;
 - journals and ISO-4/LTWA Study Lab adapters and LTWA data source;
 - dependency-injected statistics, outliers, curve fitting, data cleaning, BibTeX, and error bars;
 - course-aware persistence/provenance workflows for scientific artifacts;
@@ -34,11 +32,10 @@ The following are not merge blockers for the dependency-free foundation and must
 
 ## Next implementation order
 
-1. Structure + selection vertical: expose PDB/GRO/XYZ parsing/conversion and selection/spatial queries together.
-2. Journals + ISO-4: add the LTWA data source and title-abbreviation UI.
-3. Dependency-injected analytical core: introduce the vendor injection boundary before replacing statistical/data-cleaning/BibTeX/error-bar implementations.
-4. Course-aware scientific artifacts: persist reproducible inputs/outputs with source course/lesson provenance.
+1. Journals + ISO-4: add a legally appropriate LTWA data source and title-abbreviation UI without misrepresenting heuristic output as authoritative ISO-4.
+2. Dependency-injected analytical core: introduce the vendor injection boundary before replacing statistical/data-cleaning/BibTeX/error-bar implementations.
+3. Course-aware scientific artifacts: persist reproducible inputs/outputs with source course/lesson provenance.
 
 ## Merge claim
 
-A green exact-head CI run makes this PR suitable to merge as the **dependency-free STEMKit scientific-core foundation with calibrated digitizer, validated SLURM and PLUMED generation, and golden certification**. It does not establish full STEMKit feature parity or publication-grade equivalence for the deferred modules.
+A green exact-head CI run makes this PR suitable to merge as the **dependency-free STEMKit scientific-core foundation with structure/selection, calibrated digitizer, validated SLURM and PLUMED generation, and golden certification**. It does not establish full STEMKit feature parity or publication-grade equivalence for the deferred modules.
