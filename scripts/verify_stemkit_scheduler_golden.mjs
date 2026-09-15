@@ -54,7 +54,7 @@ assert.match(lsf.script, /#BSUB -R "span\[ptile=8\]"/);
 assert.match(lsf.script, /#BSUB -R "rusage\[mem=32768\]"/);
 assert.match(lsf.script, /#BSUB -gpu "num=1"/);
 assert.match(lsf.script, /#BSUB -W 24:00/);
-assert.match(lsf.script, /bsub < submit\.sh/).not;
+assert.doesNotMatch(lsf.script, /#SBATCH/);
 
 const sge = Scheduler.buildHeader({
   scheduler: 'sge', ...mpi, pe: 'mpi', gpus: 2, array: true, arrayRange: '1-10%3'
