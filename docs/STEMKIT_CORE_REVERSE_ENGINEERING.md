@@ -21,7 +21,7 @@ The upstream core is composed of ES modules with no DOM dependency. A barrel mod
 | statistics | 870 | jStat | descriptive stats, tests, ANOVA, correlation, non-parametrics, assumptions | simplified local version remains |
 | outliers | 353 | jStat | z, modified-z, IQR, Grubbs | simplified local version remains |
 | curve-fitting | 504 | regression.js | multiple fit models, adequacy, residuals, exports | simplified linear fit remains |
-| structure | 1109 | none | PDB/GRO/XYZ, mass, COM, Rg, rotations, conversion | vendored + wired for PDB/translation/stats + golden certified |
+| structure | 1109 | none | PDB/GRO/XYZ, mass, COM, Rg, rotations, conversion | vendored + PDB/GRO/XYZ browser adapter + golden certified |
 | slurm | 454 | none | validated GROMACS/LAMMPS SLURM scripts and resource estimates | vendored + browser adapter + golden certified |
 | units | 407 | none | 64 units / 10 categories, CODATA/SI conversions | vendored + wired + golden certified |
 | data-cleaning | 553 | PapaParse | typed parsing, cleaning, imputation, profiling | simplified local version remains |
@@ -32,7 +32,7 @@ The upstream core is composed of ES modules with no DOM dependency. A barrel mod
 | journals | 281 | none | journal title rule engine | vendored; UI wiring pending |
 | iso4 | 675 | none | LTWA parsing and ISO-4 abbreviation | vendored; LTWA dataset/UI wiring pending |
 | plumed | 529 | none | version-aware PLUMED generation and validation | vendored + browser adapter + golden certified |
-| selection | 570 | none | atom-selection language and spatial queries | vendored; structure UI wiring pending |
+| selection | 570 | none | atom-selection language and spatial queries | vendored + structure inspector adapter + golden certified |
 
 The upstream project documents 1,077 tests across its 16 domain modules, with numerical fixtures validated against SciPy, NumPy, scipy.constants, and physical invariants.
 
@@ -43,7 +43,8 @@ The upstream project documents 1,077 tests across its 16 domain modules, with nu
 3. **Statistical definitions are intentionally explicit.** The upstream barrel resolves collisions such as sample vs population standard deviation rather than silently treating them as identical.
 4. **Scientific precision is tested.** Tail probabilities, standardized moments, PDB element inference, CODATA factors, geometry invariants, and round-trip formats have dedicated regression coverage.
 5. **Structure handling is much deeper than our first implementation.** Upstream supports PDB/GRO/XYZ, mass-aware geometry, triclinic cells, format conversion, rotation, centering, scaling, box validation, and element inference.
-6. **Study Lab should become an adapter over a versioned scientific core.** UI code should collect inputs/render outputs; it should not own numerical algorithms.
+6. **Selection is a reusable scientific language, not a UI filter.** It supports named biochemical groups, attribute matching, ranges, negation, union, residue expansion, unit-aware spatial `within:` queries, and contact search through a spatial grid.
+7. **Study Lab should become an adapter over a versioned scientific core.** UI code should collect inputs/render outputs; it should not own numerical algorithms.
 
 ## Target architecture
 
@@ -56,9 +57,9 @@ Course Intelligence
     │   ├── digitizer.js
     │   ├── slurm.js
     │   ├── plumed.js
-    │   ├── molecular.js          next: structure + selection
+    │   ├── structure.js
     │   ├── data.js               Phase B
-    │   └── writing.js            Phase B / ISO-4
+    │   └── writing.js            Phase A/B
     └── vendor/stemkit-core/
         ├── dependency-free upstream modules
         ├── injected dependent modules
@@ -66,28 +67,26 @@ Course Intelligence
         └── parity smoke/golden tests
 ```
 
-The current thin-adapter pattern is implemented by the digitizer, SLURM, and PLUMED surfaces. Interaction/rendering belongs to the adapter while scientific parsing, validation, geometry, units, and script generation remain in the vendored core.
+The thin-adapter pattern is implemented by digitizer, SLURM, PLUMED, and structure/selection. Interaction/rendering belongs to adapters while scientific parsing, geometry, selection, validation, units, and script generation remain in the vendored core.
 
 ## Phase plan
 
 ### Phase A — dependency-free core
-Status: **in progress; core foundation and HPC generation certified**
+Status: **in progress; scientific/HPC foundation largely certified**
 
 Vendored: XVG, structure, SLURM, units, LaTeX, digitizer, journals, ISO-4, PLUMED, and atom selection.
 
 Completed in the current certification slices:
-- deterministic golden fixtures for XVG parsing/statistics, structure mass/geometry/round-trip behavior, CODATA/SI unit conversions, LaTeX escaping/tables, digitizer calibration, SLURM generation/resource estimates, and PLUMED CV/bias/version behavior;
-- canonical verification runs the golden suite and recursively syntax-checks JavaScript below `app/static` while preserving the historical top-level syntax-gate contract;
+- deterministic golden fixtures for XVG parsing/statistics, structure mass/geometry/round-trip behavior, selection semantics, CODATA/SI unit conversions, LaTeX escaping/tables, digitizer calibration, SLURM generation/resource estimates, and PLUMED CV/bias/version behavior;
+- canonical verification runs the golden suites and recursively syntax-checks JavaScript below `app/static` while preserving the historical top-level syntax-gate contract;
 - browser-runtime certification for vendored units and XVG behavior;
 - calibrated digitizer adapter with explicit pixel endpoints, linear/log axes, fail-closed validation, pixel-resolution reporting, active calibration region visualization, CSV copy, and reopen lifecycle coverage;
 - GROMACS/LAMMPS SLURM adapter with engine-specific resource topology, arrays, memory/wall-time warnings, checkpoint-aware GROMACS commands, and core-hour estimates;
-- version-aware PLUMED adapter covering PLUMED 2.9/2.10, CV construction, rational switching functions, metadynamics/OPES/restraints/walls, MOLINFO/UNITS/PRINT, and explicit fallback warnings.
+- version-aware PLUMED adapter covering PLUMED 2.9/2.10, CV construction, rational switching functions, metadynamics/OPES/restraints/walls, MOLINFO/UNITS/PRINT, and explicit fallback warnings;
+- PDB/GRO/XYZ Structure Inspector and Coordinate Manipulator adapter with selection expressions, named groups, spatial queries, residue expansion, centering, rotation, scaling, translation, and unit-aware format conversion.
 
 Next in the same phase:
-- expose full structure file-format support (PDB/GRO/XYZ);
-- add rotation/centering/scaling and format conversion;
-- connect atom selection and spatial-query capabilities to the structure UI;
-- wire journals/ISO-4 with an LTWA data source.
+- wire journals/ISO-4 with a legally appropriate LTWA data source and clearly distinguish authoritative ISO-4 data from heuristic rules.
 
 ### Phase B — injected analytical core
 Status: **not started**
