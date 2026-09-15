@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as Xvg from '../app/static/vendor/stemkit-core/xvg-parser.js';
 import * as Structure from '../app/static/vendor/stemkit-core/structure.js';
 import * as Slurm from '../app/static/vendor/stemkit-core/slurm.js';
+import * as Scheduler from '../app/static/vendor/stemkit-core/scheduler.js';
 import * as Units from '../app/static/vendor/stemkit-core/units.js';
 import * as Latex from '../app/static/vendor/stemkit-core/latex.js';
 import * as Digitizer from '../app/static/vendor/stemkit-core/digitizer.js';
@@ -65,6 +66,10 @@ const slurm = Slurm.generateScript({
 });
 assert.match(slurm.script, /#SBATCH/);
 assert.match(slurm.script, /study_lab_smoke/);
+
+assert.deepEqual(Scheduler.SCHEDULERS.map(item => item.id), ['slurm', 'pbs', 'lsf', 'sge']);
+assert.match(Scheduler.buildHeader({ scheduler: 'pbs', engine: 'gromacs', cpusPerTask: 4, walltime: '01:00:00', memory: '4G' }).script, /#PBS/);
+assert.equal(Scheduler.submitCommand('lsf'), 'bsub < submit.sh');
 
 assert.equal(typeof Journals.normKey, 'function');
 assert.equal(typeof Iso4.parseLTWA, 'function');
