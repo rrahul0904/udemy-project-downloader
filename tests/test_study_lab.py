@@ -16,6 +16,7 @@ class StudyLabIntegrationTests(unittest.TestCase):
             "app/static/study-lab-adapters/slurm.js",
             "app/static/study-lab-adapters/plumed.js",
             "app/static/study-lab-adapters/structure.js",
+            "app/static/study-lab-adapters/journal.js",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
 
@@ -81,6 +82,17 @@ class StudyLabIntegrationTests(unittest.TestCase):
         self.assertIn("StemStructure.rotateAtoms", adapter)
         self.assertIn("StemSelection.selectAtoms", adapter)
         self.assertIn("within:", adapter)
+
+    def test_journal_adapter_uses_journal_and_iso4_cores_without_bundled_ltwa(self):
+        ui = (ROOT / "app/static/lab-ui.js").read_text(encoding="utf-8")
+        adapter = (ROOT / "app/static/study-lab-adapters/journal.js").read_text(encoding="utf-8")
+        self.assertIn("enhanceJournalPanel", ui)
+        self.assertIn("vendor/stemkit-core/journals.js", adapter)
+        self.assertIn("vendor/stemkit-core/iso4.js", adapter)
+        self.assertIn("StemJournals.buildEngine", adapter)
+        self.assertIn("StemIso4.loadIso4", adapter)
+        self.assertIn("separate from STEMKit’s MIT license", adapter)
+        self.assertFalse((ROOT / "app/static/vendor/stemkit-core/abbreviation.csv").exists())
 
     def test_study_lab_documentation_records_parity_scope(self):
         docs = (ROOT / "docs/STUDY_LAB.md").read_text(encoding="utf-8")
