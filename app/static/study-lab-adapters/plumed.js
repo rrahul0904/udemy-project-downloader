@@ -118,38 +118,38 @@ function buildCv(panel, slot, warnings) {
 function biasParams(panel, method) {
   if (method === 'wt_metad' || method === 'metad') {
     return {
-      pace: numberValue(panel, 'plumed-pace', 500),
-      height: numberValue(panel, 'plumed-height', 1.2),
-      sigma: value(panel, 'plumed-sigma', '').trim(),
-      biasfactor: numberValue(panel, 'plumed-biasfactor', 10),
+      pace: numberValue(panel, 'plumed-metad-pace', 500),
+      height: numberValue(panel, 'plumed-metad-height', 1.2),
+      sigma: value(panel, 'plumed-metad-sigma', '').trim(),
+      biasfactor: numberValue(panel, 'plumed-metad-biasfactor', 10),
       temp: numberValue(panel, 'temperature', 300),
-      gridMin: value(panel, 'plumed-grid-min', '').trim(),
-      gridMax: value(panel, 'plumed-grid-max', '').trim(),
-      gridBin: value(panel, 'plumed-grid-bin', '').trim(),
-      file: value(panel, 'plumed-hills-file', 'HILLS').trim() || 'HILLS',
+      gridMin: value(panel, 'plumed-metad-grid-min', '').trim(),
+      gridMax: value(panel, 'plumed-metad-grid-max', '').trim(),
+      gridBin: value(panel, 'plumed-metad-grid-bin', '').trim(),
+      file: value(panel, 'plumed-metad-hills-file', 'HILLS').trim() || 'HILLS',
     };
   }
   if (method === 'opes') {
     return {
-      pace: numberValue(panel, 'plumed-pace', 500),
-      barrier: numberValue(panel, 'plumed-barrier', 30),
-      sigma: value(panel, 'plumed-sigma', 'ADAPTIVE').trim() || 'ADAPTIVE',
+      pace: numberValue(panel, 'plumed-opes-pace', 500),
+      barrier: numberValue(panel, 'plumed-opes-barrier', 30),
+      sigma: value(panel, 'plumed-opes-sigma', 'ADAPTIVE').trim() || 'ADAPTIVE',
       temp: numberValue(panel, 'temperature', 300),
     };
   }
   if (method === 'restraint' || method === 'upper' || method === 'lower') {
     return {
-      at: value(panel, 'plumed-at', '').trim(),
-      kappa: numberValue(panel, 'plumed-kappa', method === 'restraint' ? 100 : 150),
+      at: value(panel, 'plumed-static-at', '').trim(),
+      kappa: numberValue(panel, 'plumed-static-kappa', method === 'restraint' ? 100 : 150),
     };
   }
   if (method === 'moving') {
     return {
-      at0: value(panel, 'plumed-at0', '').trim(),
-      at1: value(panel, 'plumed-at1', '').trim(),
-      step0: numberValue(panel, 'plumed-step0', 0),
-      step1: numberValue(panel, 'plumed-step1', 100000),
-      kappa: numberValue(panel, 'plumed-kappa', 100),
+      at0: value(panel, 'plumed-moving-at0', '').trim(),
+      at1: value(panel, 'plumed-moving-at1', '').trim(),
+      step0: numberValue(panel, 'plumed-moving-step0', 0),
+      step1: numberValue(panel, 'plumed-moving-step1', 100000),
+      kappa: numberValue(panel, 'plumed-moving-kappa', 100),
     };
   }
   return {};
@@ -242,7 +242,7 @@ function installRunInterceptor(panel) {
   }, true);
 }
 
-function cvSection(slot, defaultType, defaultLabel, defaultAtoms, defaultBias) {
+function cvSection(slot, defaultLabel, defaultAtoms, defaultBias) {
   const typeOptions = slot === 1
     ? [['DISTANCE', 'Distance'], ['TORSION', 'Torsion'], ['COORDINATION', 'Coordination'], ['DIHEDRAL_CORRELATION', 'Dihedral correlation']]
     : [['', 'Disabled'], ['DISTANCE', 'Distance'], ['TORSION', 'Torsion'], ['COORDINATION', 'Coordination'], ['DIHEDRAL_CORRELATION', 'Dihedral correlation']];
@@ -288,8 +288,8 @@ export function enhancePlumedPanel(panel) {
       ${field('plumed-unit-energy', 'Energy unit', 'kj/mol')}
       ${field('plumed-unit-time', 'Time unit', 'ps')}
     </div>
-    ${cvSection(1, 'DISTANCE', 'd1', '1,2', true)}
-    ${cvSection(2, '', 'phi', '5,7,9,15', false)}
+    ${cvSection(1, 'd1', '1,2', true)}
+    ${cvSection(2, 'phi', '5,7,9,15', false)}
     <div class="form-grid three">
       ${selectField('plumed-bias', 'Bias method', [
         ['none', 'None'], ['wt_metad', 'Well-tempered metadynamics'], ['metad', 'Metadynamics'],
@@ -301,42 +301,42 @@ export function enhancePlumedPanel(panel) {
     </div>
     <div data-plumed-bias="wt_metad,metad" hidden>
       <div class="form-grid three">
-        ${field('plumed-pace', 'PACE', '500', 'number', '1')}
-        ${field('plumed-height', 'HEIGHT', '1.2', 'number', 'any')}
-        ${field('plumed-sigma', 'SIGMA', '0.05')}
+        ${field('plumed-metad-pace', 'PACE', '500', 'number', '1')}
+        ${field('plumed-metad-height', 'HEIGHT', '1.2', 'number', 'any')}
+        ${field('plumed-metad-sigma', 'SIGMA', '0.05')}
       </div>
       <div class="form-grid three">
-        ${field('plumed-biasfactor', 'BIASFACTOR (WT only)', '10', 'number', 'any')}
-        ${field('plumed-grid-min', 'GRID_MIN', '0')}
-        ${field('plumed-grid-max', 'GRID_MAX', '2')}
+        ${field('plumed-metad-biasfactor', 'BIASFACTOR (WT only)', '10', 'number', 'any')}
+        ${field('plumed-metad-grid-min', 'GRID_MIN', '0')}
+        ${field('plumed-metad-grid-max', 'GRID_MAX', '2')}
       </div>
       <div class="form-grid three">
-        ${field('plumed-grid-bin', 'GRID_BIN', '200')}
-        ${field('plumed-hills-file', 'HILLS file', 'HILLS')}
+        ${field('plumed-metad-grid-bin', 'GRID_BIN', '200')}
+        ${field('plumed-metad-hills-file', 'HILLS file', 'HILLS')}
       </div>
     </div>
     <div data-plumed-bias="opes" hidden>
       <div class="form-grid three">
-        ${field('plumed-pace', 'PACE', '500', 'number', '1')}
-        ${field('plumed-barrier', 'BARRIER', '30', 'number', 'any')}
-        ${field('plumed-sigma', 'SIGMA', 'ADAPTIVE')}
+        ${field('plumed-opes-pace', 'PACE', '500', 'number', '1')}
+        ${field('plumed-opes-barrier', 'BARRIER', '30', 'number', 'any')}
+        ${field('plumed-opes-sigma', 'SIGMA', 'ADAPTIVE')}
       </div>
     </div>
     <div data-plumed-bias="restraint,upper,lower" hidden>
       <div class="form-grid three">
-        ${field('plumed-at', 'AT', '1.0')}
-        ${field('plumed-kappa', 'KAPPA', '100', 'number', 'any')}
+        ${field('plumed-static-at', 'AT', '1.0')}
+        ${field('plumed-static-kappa', 'KAPPA', '100', 'number', 'any')}
       </div>
     </div>
     <div data-plumed-bias="moving" hidden>
       <div class="form-grid three">
-        ${field('plumed-at0', 'AT0', '1.0')}
-        ${field('plumed-at1', 'AT1', '2.0')}
-        ${field('plumed-kappa', 'KAPPA', '100', 'number', 'any')}
+        ${field('plumed-moving-at0', 'AT0', '1.0')}
+        ${field('plumed-moving-at1', 'AT1', '2.0')}
+        ${field('plumed-moving-kappa', 'KAPPA', '100', 'number', 'any')}
       </div>
       <div class="form-grid three">
-        ${field('plumed-step0', 'STEP0', '0', 'number', '1')}
-        ${field('plumed-step1', 'STEP1', '100000', 'number', '1')}
+        ${field('plumed-moving-step0', 'STEP0', '0', 'number', '1')}
+        ${field('plumed-moving-step1', 'STEP1', '100000', 'number', '1')}
       </div>
     </div>
     <p id="plumed-summary" class="status">Choose PLUMED mode, configure CVs, then generate the workflow.</p>
@@ -347,10 +347,6 @@ export function enhancePlumedPanel(panel) {
   else form.append(root);
 
   restoreExtendedState(panel);
-  const firstType = panel.querySelector('#plumed-cv1-type');
-  const secondType = panel.querySelector('#plumed-cv2-type');
-  if (firstType && !firstType.value) firstType.value = 'DISTANCE';
-  if (secondType && !secondType.value) secondType.value = '';
   updateBiasFields(panel);
   updateMode(panel);
 
