@@ -15,6 +15,7 @@ class StudyLabIntegrationTests(unittest.TestCase):
             "app/static/study-lab-adapters/digitizer.js",
             "app/static/study-lab-adapters/slurm.js",
             "app/static/study-lab-adapters/plumed.js",
+            "app/static/study-lab-adapters/structure.js",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
 
@@ -68,6 +69,18 @@ class StudyLabIntegrationTests(unittest.TestCase):
         self.assertIn("fallback: 'DIHCOR'", adapter)
         self.assertIn("wt_metad", adapter)
         self.assertIn("opes", adapter)
+
+    def test_structure_adapter_uses_structure_and_selection_cores(self):
+        ui = (ROOT / "app/static/lab-ui.js").read_text(encoding="utf-8")
+        adapter = (ROOT / "app/static/study-lab-adapters/structure.js").read_text(encoding="utf-8")
+        self.assertIn("enhanceStructurePanel", ui)
+        self.assertIn("vendor/stemkit-core/structure.js", adapter)
+        self.assertIn("vendor/stemkit-core/selection.js", adapter)
+        self.assertIn("StemStructure.parseStructure", adapter)
+        self.assertIn("StemStructure.formatStructure", adapter)
+        self.assertIn("StemStructure.rotateAtoms", adapter)
+        self.assertIn("StemSelection.selectAtoms", adapter)
+        self.assertIn("within:", adapter)
 
     def test_study_lab_documentation_records_parity_scope(self):
         docs = (ROOT / "docs/STUDY_LAB.md").read_text(encoding="utf-8")
