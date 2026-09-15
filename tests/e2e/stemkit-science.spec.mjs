@@ -66,3 +66,28 @@ test('Plot Digitizer exposes calibrated axes, validation, log controls, and surv
   await expect(page.locator('#stemkit-digitizer-calibration')).toBeVisible();
   await expect(page.locator('#stemkit-digitizer-calibration')).toHaveCount(1);
 });
+
+test('MD Workflow Generator creates version-aware STEMKit PLUMED input in the browser', async ({ page }) => {
+  await page.goto('/lab');
+
+  const workflow = page.locator('.tool-card').filter({ hasText: 'MD Workflow Generator' });
+  await workflow.getByRole('button', { name: 'Open' }).click();
+  await expect(page.locator('#stemkit-plumed-config')).toHaveCount(1);
+
+  await page.locator('#engine').selectOption('plumed');
+  await expect(page.locator('#stemkit-plumed-config')).toBeVisible();
+  await page.locator('#plumed-version').selectOption('2.9');
+  await page.locator('#plumed-cv1-type').selectOption('DIHEDRAL_CORRELATION');
+  await page.locator('#plumed-cv1-label').fill('corr');
+  await page.locator('#plumed-cv1-atoms').fill('1,2,3,4,5,6,7,8');
+  await page.locator('#plumed-bias').selectOption('none');
+
+  await page.getByRole('button', { name: 'Generate workflow' }).click();
+  await expect(page.locator('#result')).toContainText('Target PLUMED version: 2.9');
+  await expect(page.locator('#result')).toContainText('corr: DIHCOR ATOMS=1,2,3,4,5,6,7,8');
+  await expect(page.locator('#result')).toContainText('older action name');
+
+  await page.locator('#plumed-version').selectOption('2.10');
+  await page.getByRole('button', { name: 'Generate workflow' }).click();
+  await expect(page.locator('#result')).toContainText('corr: DIHEDRAL_CORRELATION ATOMS=1,2,3,4,5,6,7,8');
+});
