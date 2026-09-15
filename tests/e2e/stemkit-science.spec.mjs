@@ -142,3 +142,36 @@ test('Coordinate Manipulator handles XYZ transforms and GRO serialization', asyn
   await expect(page.locator('#result')).toContainText('STEMKit structure transform: XYZ → GRO');
   await expect(page.locator('#result')).toContainText('Transformed by Course Intelligence Study Lab');
 });
+
+test('Journal Abbreviator uses STEMKit exact rules and local-only ISO-4 LTWA upload', async ({ page }) => {
+  await page.goto('/lab');
+
+  const journal = page.locator('.tool-card').filter({ hasText: 'Journal Abbreviator' });
+  await journal.getByRole('button', { name: 'Open' }).click();
+  await expect(page.locator('#stemkit-journal-config')).toBeVisible();
+
+  await page.locator('#journal-title').fill('Journal of Molecular Biology');
+  await page.locator('#journal-mode').selectOption('rules');
+  await page.getByRole('button', { name: 'Abbreviate' }).click();
+  await expect(page.locator('#result')).toContainText('J. Mol. Biol.');
+  await expect(page.locator('#result')).toContainText('Recognized exact/custom title: yes');
+
+  await page.locator('#journal-mode').selectOption('iso4');
+  await expect(page.locator('#journal-iso4-section')).toBeVisible();
+  const syntheticLtwa = [
+    'Word\tAbbreviation\tLanguage',
+    'journal\tJ.\tEnglish',
+    'molecular\tMol.\tEnglish',
+    'biology\tBiol.\tEnglish',
+  ].join('\n');
+  await page.locator('#journal-ltwa-file').setInputFiles({
+    name: 'synthetic-ltwa.tsv',
+    mimeType: 'text/tab-separated-values',
+    buffer: Buffer.from(syntheticLtwa),
+  });
+  await expect(page.locator('#journal-ltwa-status')).toContainText('3 rows parsed');
+
+  await page.getByRole('button', { name: 'Abbreviate' }).click();
+  await expect(page.locator('#result')).toContainText('J. Mol. Biol.');
+  await expect(page.locator('#result')).toContainText('LTWA entries indexed: 3');
+});
