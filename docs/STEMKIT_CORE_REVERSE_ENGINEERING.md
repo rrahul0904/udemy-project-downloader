@@ -22,7 +22,7 @@ The upstream core is composed of ES modules with no DOM dependency. A barrel mod
 | outliers | 353 | jStat | z, modified-z, IQR, Grubbs | simplified local version remains |
 | curve-fitting | 504 | regression.js | multiple fit models, adequacy, residuals, exports | simplified linear fit remains |
 | structure | 1109 | none | PDB/GRO/XYZ, mass, COM, Rg, rotations, conversion | vendored + wired for PDB/translation/stats + golden certified |
-| slurm | 454 | none | validated GROMACS/LAMMPS SLURM scripts and resource estimates | vendored; UI wiring pending |
+| slurm | 454 | none | validated GROMACS/LAMMPS SLURM scripts and resource estimates | vendored + browser adapter + golden certified |
 | units | 407 | none | 64 units / 10 categories, CODATA/SI conversions | vendored + wired + golden certified |
 | data-cleaning | 553 | PapaParse | typed parsing, cleaning, imputation, profiling | simplified local version remains |
 | latex | 339 | none | LaTeX/Markdown tables, matrices, escaping | vendored + wired for tables + golden certified |
@@ -31,7 +31,7 @@ The upstream core is composed of ES modules with no DOM dependency. A barrel mod
 | error-bars | 423 | jStat | group summaries, CI, Holm pairwise comparisons | simplified local version remains |
 | journals | 281 | none | journal title rule engine | vendored; UI wiring pending |
 | iso4 | 675 | none | LTWA parsing and ISO-4 abbreviation | vendored; LTWA dataset/UI wiring pending |
-| plumed | 529 | none | version-aware PLUMED generation and validation | vendored; UI wiring pending |
+| plumed | 529 | none | version-aware PLUMED generation and validation | vendored + browser adapter + golden certified |
 | selection | 570 | none | atom-selection language and spatial queries | vendored; structure UI wiring pending |
 
 The upstream project documents 1,077 tests across its 16 domain modules, with numerical fixtures validated against SciPy, NumPy, scipy.constants, and physical invariants.
@@ -53,10 +53,12 @@ Course Intelligence
 └── Browser Study Lab
     ├── lab-ui.js                 interaction + rendering only
     ├── study-lab-adapters/
-    │   ├── data.js
-    │   ├── molecular.js
-    │   ├── writing.js
-    │   └── hpc.js
+    │   ├── digitizer.js
+    │   ├── slurm.js
+    │   ├── plumed.js
+    │   ├── molecular.js          next: structure + selection
+    │   ├── data.js               Phase B
+    │   └── writing.js            Phase B / ISO-4
     └── vendor/stemkit-core/
         ├── dependency-free upstream modules
         ├── injected dependent modules
@@ -64,26 +66,28 @@ Course Intelligence
         └── parity smoke/golden tests
 ```
 
-The first concrete adapter now lives under `app/static/study-lab-adapters/digitizer.js`. It progressively upgrades the existing Study Lab digitizer without moving scientific algorithms back into the UI layer.
+The current thin-adapter pattern is implemented by the digitizer, SLURM, and PLUMED surfaces. Interaction/rendering belongs to the adapter while scientific parsing, validation, geometry, units, and script generation remain in the vendored core.
 
 ## Phase plan
 
 ### Phase A — dependency-free core
-Status: **in progress; certification baseline established**
+Status: **in progress; core foundation and HPC generation certified**
 
-Vendored: XVG, structure, SLURM, units, LaTeX, digitizer, journals, ISO-4, PLUMED, and atom selection. The Study Lab now calls upstream functions for XVG analysis, PDB structure analysis/translation, scientific conversion, LaTeX table generation, and digitizer coordinate mapping.
+Vendored: XVG, structure, SLURM, units, LaTeX, digitizer, journals, ISO-4, PLUMED, and atom selection.
 
-Completed in the current certification slice:
-- deterministic golden fixtures for XVG parsing/statistics, structure mass/geometry/round-trip behavior, CODATA/SI unit conversions, LaTeX escaping/tables, and digitizer calibration;
-- canonical verification now runs the golden suite and recursively syntax-checks JavaScript below `app/static`;
+Completed in the current certification slices:
+- deterministic golden fixtures for XVG parsing/statistics, structure mass/geometry/round-trip behavior, CODATA/SI unit conversions, LaTeX escaping/tables, digitizer calibration, SLURM generation/resource estimates, and PLUMED CV/bias/version behavior;
+- canonical verification runs the golden suite and recursively syntax-checks JavaScript below `app/static` while preserving the historical top-level syntax-gate contract;
 - browser-runtime certification for vendored units and XVG behavior;
-- calibrated digitizer adapter with explicit pixel endpoints, linear/log axes, fail-closed validation, pixel-resolution reporting, active calibration region visualization, CSV copy, and reopen lifecycle coverage.
+- calibrated digitizer adapter with explicit pixel endpoints, linear/log axes, fail-closed validation, pixel-resolution reporting, active calibration region visualization, CSV copy, and reopen lifecycle coverage;
+- GROMACS/LAMMPS SLURM adapter with engine-specific resource topology, arrays, memory/wall-time warnings, checkpoint-aware GROMACS commands, and core-hour estimates;
+- version-aware PLUMED adapter covering PLUMED 2.9/2.10, CV construction, rational switching functions, metadynamics/OPES/restraints/walls, MOLINFO/UNITS/PRINT, and explicit fallback warnings.
 
 Next in the same phase:
 - expose full structure file-format support (PDB/GRO/XYZ);
 - add rotation/centering/scaling and format conversion;
-- replace starter MD workflow text with a proper SLURM surface;
-- wire journals/ISO-4, PLUMED, and atom-selection modules into Study Lab surfaces and provide the LTWA data source.
+- connect atom selection and spatial-query capabilities to the structure UI;
+- wire journals/ISO-4 with an LTWA data source.
 
 ### Phase B — injected analytical core
 Status: **not started**
