@@ -91,3 +91,54 @@ test('MD Workflow Generator creates version-aware STEMKit PLUMED input in the br
   await page.getByRole('button', { name: 'Generate workflow' }).click();
   await expect(page.locator('#result')).toContainText('corr: DIHEDRAL_CORRELATION ATOMS=1,2,3,4,5,6,7,8');
 });
+
+test('Structure Inspector parses XYZ, applies atom selection, and serializes through STEMKit', async ({ page }) => {
+  await page.goto('/lab');
+
+  const structure = page.locator('.tool-card').filter({ hasText: 'Structure Inspector' });
+  await structure.getByRole('button', { name: 'Open' }).click();
+  await expect(page.locator('#stemkit-structure-config')).toBeVisible();
+
+  await page.locator('#structure-format').selectOption('xyz');
+  await page.locator('#structure-output-format').selectOption('pdb');
+  await page.locator('#structure-selection').fill('elem:C');
+  await page.locator('#structure-include-output').check();
+  await page.locator('#input-data').fill([
+    '3',
+    'browser fixture',
+    'C 0.0 0.0 0.0',
+    'H 1.0 0.0 0.0',
+    'O 4.0 0.0 0.0',
+  ].join('\n'));
+
+  await page.getByRole('button', { name: 'Inspect structure' }).click();
+  await expect(page.locator('#result')).toContainText('Format: XYZ');
+  await expect(page.locator('#result')).toContainText('Selected atoms: 1 / 3');
+  await expect(page.locator('#result')).toContainText('# Converted PDB');
+  await expect(page.locator('#result')).toContainText('ATOM');
+});
+
+test('Coordinate Manipulator handles XYZ transforms and GRO serialization', async ({ page }) => {
+  await page.goto('/lab');
+
+  const manipulator = page.locator('.tool-card').filter({ hasText: 'Coordinate Manipulator' });
+  await manipulator.getByRole('button', { name: 'Open' }).click();
+  await expect(page.locator('#stemkit-structure-config')).toBeVisible();
+
+  await page.locator('#structure-format').selectOption('xyz');
+  await page.locator('#structure-output-format').selectOption('gro');
+  await page.locator('#structure-center').selectOption('geometric');
+  await page.locator('#structure-rz').fill('90');
+  await page.locator('#structure-scale').fill('2');
+  await page.locator('#dx').fill('1');
+  await page.locator('#input-data').fill([
+    '2',
+    'transform fixture',
+    'C 0.0 0.0 0.0',
+    'H 1.0 0.0 0.0',
+  ].join('\n'));
+
+  await page.getByRole('button', { name: 'Translate coordinates' }).click();
+  await expect(page.locator('#result')).toContainText('STEMKit structure transform: XYZ → GRO');
+  await expect(page.locator('#result')).toContainText('Transformed by Course Intelligence Study Lab');
+});
