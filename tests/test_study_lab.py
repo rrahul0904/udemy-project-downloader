@@ -11,6 +11,9 @@ class StudyLabIntegrationTests(unittest.TestCase):
             "app/static/lab.html",
             "app/static/lab.css",
             "app/static/lab.js",
+            "app/static/lab-ui.js",
+            "app/static/study-lab-adapters/digitizer.js",
+            "app/static/study-lab-adapters/slurm.js",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
 
@@ -42,6 +45,15 @@ class StudyLabIntegrationTests(unittest.TestCase):
             "Pomodoro Timer",
         ):
             self.assertIn(label, html)
+
+    def test_slurm_adapter_is_wired_to_vendored_core(self):
+        ui = (ROOT / "app/static/lab-ui.js").read_text(encoding="utf-8")
+        adapter = (ROOT / "app/static/study-lab-adapters/slurm.js").read_text(encoding="utf-8")
+        self.assertIn("enhanceSlurmPanel", ui)
+        self.assertIn("vendor/stemkit-core/slurm.js", adapter)
+        self.assertIn("StemSlurm.generateScript", adapter)
+        self.assertIn("StemSlurm.estimateCoreHours", adapter)
+        self.assertIn("STEMKit SLURM core", adapter)
 
     def test_study_lab_documentation_records_parity_scope(self):
         docs = (ROOT / "docs/STUDY_LAB.md").read_text(encoding="utf-8")
