@@ -1,6 +1,7 @@
 import { enhanceDigitizerPanel } from './study-lab-adapters/digitizer.js';
 import { enhanceSlurmPanel } from './study-lab-adapters/slurm.js';
 import { enhancePlumedPanel } from './study-lab-adapters/plumed.js';
+import { enhanceStructurePanel } from './study-lab-adapters/structure.js';
 
 const RECENT_KEY='course-intelligence-recent-tools';
 let activeFilter='all';
@@ -18,7 +19,7 @@ function renderRecent(items=readRecent()){
   recentRoot.querySelectorAll('[data-recent-tool]').forEach((button)=>button.addEventListener('click',()=>grid.querySelector(`[data-open="${CSS.escape(button.dataset.recentTool)}"]`)?.click()));
 }
 function applyFilters(){const query=search.value.trim().toLowerCase();grid.querySelectorAll('.tool-card').forEach((card)=>{const categoryMatch=activeFilter==='all'||card.dataset.category===activeFilter;const searchMatch=!query||String(card.dataset.search||'').includes(query)||card.textContent.toLowerCase().includes(query);card.hidden=!(categoryMatch&&searchMatch);});}
-function enhanceActivePanel(){enhanceDigitizerPanel(panel);enhanceSlurmPanel(panel);enhancePlumedPanel(panel);}
+function enhanceActivePanel(){enhanceDigitizerPanel(panel);enhanceSlurmPanel(panel);enhancePlumedPanel(panel);enhanceStructurePanel(panel);}
 document.querySelectorAll('[data-filter]').forEach((button)=>button.addEventListener('click',()=>{activeFilter=button.dataset.filter;document.querySelectorAll('[data-filter]').forEach((item)=>item.classList.toggle('active',item===button));applyFilters();}));
 search.addEventListener('input',applyFilters);
 grid.addEventListener('click',(event)=>{const button=event.target.closest('[data-open]');if(button){writeRecent(button.dataset.open);queueMicrotask(enhanceActivePanel);}});
