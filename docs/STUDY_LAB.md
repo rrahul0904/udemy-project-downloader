@@ -6,6 +6,8 @@ Study Lab is the local-first scientific and research workbench inside Course Int
 
 The existing catalog contains 21 tools spanning descriptive data work, plotting/digitization, molecular formats/workflows, writing/citation helpers, scientific unit conversion, and study utilities.
 
+The original Study Lab shipped as a **functional integrated MVP**. The current parity work keeps that integrated product surface while replacing lightweight scientific approximations with the tested upstream STEMKit computational core where practical.
+
 ## STEMKit migration status
 
 The current STEMKit parity branch is replacing lightweight local approximations with a vendored MIT-licensed scientific core through thin adapters.
@@ -25,7 +27,7 @@ The browser integration layer now includes `app/static/study-lab-adapters/digiti
 `bash scripts/verify.sh` performs the canonical repository checks and now includes:
 
 - Python unit tests and compilation;
-- recursive JavaScript syntax checks across `app/static`;
+- top-level JavaScript syntax checks plus recursive checks for nested Study Lab/vendor modules;
 - no-dependency STEMKit module smoke coverage;
 - deterministic STEMKit golden fixtures covering XVG, structure, units, LaTeX, and digitizer behavior.
 
