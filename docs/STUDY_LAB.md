@@ -16,9 +16,7 @@ The existing catalog contains 21 tools spanning descriptive data work, plotting/
 
 ## STEMKit migration status
 
-The current STEMKit parity branch is replacing lightweight local approximations with a vendored MIT-licensed scientific core through thin adapters.
-
-Certified in the current phase:
+The dependency-free STEMKit phase now has browser adapters and deterministic certification for the scientific/HPC surfaces we selected:
 
 - **XVG Visualizer** — vendored parser and sample column statistics with golden fixtures.
 - **Structure Inspector / Coordinate Manipulator** — vendored PDB/GRO/XYZ parsing, molecular mass/geometry/Rg statistics, format conversion, centering, rotation, scaling, translation, and unit-aware serialization. Structure Inspector also exposes vendored atom-selection expressions, named groups, residue expansion, and spatial `within:` queries.
@@ -27,8 +25,9 @@ Certified in the current phase:
 - **Plot Digitizer** — vendored calibrated pixel-to-data mapping with explicit pixel endpoints, linear/log axes, validation, pixel-resolution reporting, calibrated-region visualization, and CSV copy.
 - **MD Workflow Generator / SLURM** — vendored SLURM generation is wired for GROMACS and LAMMPS with resource validation, job-array handling, memory/wall-time warnings, checkpoint-aware GROMACS commands, and allocation estimates.
 - **MD Workflow Generator / PLUMED** — vendored PLUMED generation is wired for 2.9/2.10 targets with Distance, Torsion, Coordination, and Dihedral-correlation CVs; rational switching functions; metadynamics, OPES, restraint, moving-restraint, and wall biases; MOLINFO/UNITS/PRINT; target-version fallbacks; and warnings surfaced as comments rather than silently ignored.
+- **Journal Abbreviator / ISO-4** — whole-title abbreviation now runs through the vendored journal normalization/matching core. ISO-4 word-level abbreviation uses the vendored LTWA parser/matcher but requires a local LTWA CSV/TSV file that the user is permitted to use. The ISSN LTWA dataset is intentionally not bundled because its distribution terms are separate from STEMKit's MIT license.
 
-The browser integration layer includes `app/static/study-lab-adapters/digitizer.js`, `slurm.js`, `plumed.js`, and `structure.js`. These adapters own interaction/rendering state while scientific parsing, geometry, selection, validation, and script-generation behavior stays in the vendored core.
+The browser integration layer includes thin adapters under `app/static/study-lab-adapters/` for digitizer, SLURM, PLUMED, structure/selection, and journals/ISO-4. These adapters own interaction/rendering state while scientific parsing, geometry, selection, validation, abbreviation, and script-generation behavior stays in the vendored core.
 
 ## Verification
 
@@ -37,16 +36,19 @@ The browser integration layer includes `app/static/study-lab-adapters/digitizer.
 - Python unit tests and compilation;
 - top-level JavaScript syntax checks plus recursive checks for nested Study Lab/vendor modules;
 - no-dependency STEMKit module smoke coverage;
-- deterministic STEMKit golden fixtures covering XVG, structure, selection, units, LaTeX, digitizer, SLURM, and PLUMED behavior.
+- deterministic STEMKit golden fixtures covering XVG, structure, selection, units, LaTeX, digitizer, SLURM, PLUMED, journals, and ISO-4 behavior.
 
-Playwright verifies browser-runtime STEMKit loading, the calibrated digitizer lifecycle, PLUMED version-aware generation, XYZ selection/conversion in Structure Inspector, and coordinate transformation/GRO serialization in Coordinate Manipulator. Repository contract tests ensure the Study Lab UI is wired to vendored STEMKit modules instead of duplicate local implementations.
+Playwright verifies browser-runtime STEMKit loading, calibrated digitization, PLUMED version-aware generation, XYZ selection/conversion, coordinate transformation/GRO serialization, editable whole-title journal rules, and local-only LTWA upload for ISO-4. Repository contract tests ensure the Study Lab UI is wired to vendored STEMKit modules rather than duplicate local implementations.
 
 ## Deliberately incomplete parity
 
-Study Lab is not yet a claim of full STEMKit parity. Remaining staged work includes:
+Study Lab is not yet a claim of full STEMKit parity. Remaining staged work is now concentrated in modules that require dependency injection:
 
-- journals/ISO-4 with an LTWA data source;
-- dependency-injected statistics, outliers, curve fitting, data cleaning, BibTeX, and error-bar inference;
+- statistics and outlier inference through jStat;
+- curve fitting through regression.js;
+- data cleaning through Papa Parse;
+- BibTeX parsing/deduplication through bibtexParse;
+- error-bar inference through jStat;
 - course-aware persistence/provenance of reproducible scientific artifacts.
 
 See `docs/STEMKIT_CORE_REVERSE_ENGINEERING.md` and `docs/STEMKIT_PARITY_AUDIT.md` for the detailed phase boundary and next implementation order.
