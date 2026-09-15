@@ -21,14 +21,14 @@ The current STEMKit parity branch is replacing lightweight local approximations 
 Certified in the current phase:
 
 - **XVG Visualizer** — vendored parser and sample column statistics with golden fixtures.
-- **Structure Inspector / Coordinate Manipulator** — vendored PDB parsing, molecular mass/geometry/Rg statistics, translation, formatting, and round-trip certification.
+- **Structure Inspector / Coordinate Manipulator** — vendored PDB/GRO/XYZ parsing, molecular mass/geometry/Rg statistics, format conversion, centering, rotation, scaling, translation, and unit-aware serialization. Structure Inspector also exposes vendored atom-selection expressions, named groups, residue expansion, and spatial `within:` queries.
 - **Scientific Converter** — vendored 10-category unit database and CODATA/SI conversions with deterministic fixtures.
 - **LaTeX Table Builder** — vendored table parsing/generation with escaping fixtures.
 - **Plot Digitizer** — vendored calibrated pixel-to-data mapping with explicit pixel endpoints, linear/log axes, validation, pixel-resolution reporting, calibrated-region visualization, and CSV copy.
 - **MD Workflow Generator / SLURM** — vendored SLURM generation is wired for GROMACS and LAMMPS with resource validation, job-array handling, memory/wall-time warnings, checkpoint-aware GROMACS commands, and allocation estimates.
 - **MD Workflow Generator / PLUMED** — vendored PLUMED generation is wired for 2.9/2.10 targets with Distance, Torsion, Coordination, and Dihedral-correlation CVs; rational switching functions; metadynamics, OPES, restraint, moving-restraint, and wall biases; MOLINFO/UNITS/PRINT; target-version fallbacks; and warnings surfaced as comments rather than silently ignored.
 
-The browser integration layer includes `app/static/study-lab-adapters/digitizer.js`, `slurm.js`, and `plumed.js`. These adapters own interaction/rendering state while numerical, validation, and script-generation behavior stays in the vendored core.
+The browser integration layer includes `app/static/study-lab-adapters/digitizer.js`, `slurm.js`, `plumed.js`, and `structure.js`. These adapters own interaction/rendering state while scientific parsing, geometry, selection, validation, and script-generation behavior stays in the vendored core.
 
 ## Verification
 
@@ -37,16 +37,14 @@ The browser integration layer includes `app/static/study-lab-adapters/digitizer.
 - Python unit tests and compilation;
 - top-level JavaScript syntax checks plus recursive checks for nested Study Lab/vendor modules;
 - no-dependency STEMKit module smoke coverage;
-- deterministic STEMKit golden fixtures covering XVG, structure, units, LaTeX, digitizer, SLURM, and PLUMED behavior.
+- deterministic STEMKit golden fixtures covering XVG, structure, selection, units, LaTeX, digitizer, SLURM, and PLUMED behavior.
 
-Playwright verifies browser-runtime STEMKit loading, the calibrated digitizer lifecycle, and PLUMED version-aware generation including the 2.9 `DIHCOR` fallback and 2.10 `DIHEDRAL_CORRELATION` action. Repository contract tests ensure the Study Lab UI is wired to the vendored SLURM and PLUMED generators rather than duplicate local implementations.
+Playwright verifies browser-runtime STEMKit loading, the calibrated digitizer lifecycle, PLUMED version-aware generation, XYZ selection/conversion in Structure Inspector, and coordinate transformation/GRO serialization in Coordinate Manipulator. Repository contract tests ensure the Study Lab UI is wired to vendored STEMKit modules instead of duplicate local implementations.
 
 ## Deliberately incomplete parity
 
 Study Lab is not yet a claim of full STEMKit parity. Remaining staged work includes:
 
-- full PDB/GRO/XYZ structure editing and conversion;
-- atom selection and spatial queries;
 - journals/ISO-4 with an LTWA data source;
 - dependency-injected statistics, outliers, curve fitting, data cleaning, BibTeX, and error-bar inference;
 - course-aware persistence/provenance of reproducible scientific artifacts.
