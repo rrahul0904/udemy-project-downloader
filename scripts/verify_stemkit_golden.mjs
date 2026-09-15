@@ -5,6 +5,7 @@ import * as Structure from '../app/static/vendor/stemkit-core/structure.js';
 import * as Units from '../app/static/vendor/stemkit-core/units.js';
 import * as Latex from '../app/static/vendor/stemkit-core/latex.js';
 import * as Digitizer from '../app/static/vendor/stemkit-core/digitizer.js';
+import * as Slurm from '../app/static/vendor/stemkit-core/slurm.js';
 
 function close(actual, expected, tolerance = 1e-10, message = '') {
   assert.ok(Number.isFinite(actual), `${message || 'value'} should be finite`);
@@ -125,5 +126,45 @@ const invalidLog = Digitizer.validateCalibration({
 });
 assert.equal(invalidLog.valid, false);
 assert.ok(invalidLog.errors.some(error => /logarithmic X axis/i.test(error)));
+
+// SLURM: deterministic resource shape, engine-specific command, warnings, and allocation math.
+const gromacs = Slurm.generateScript({
+  engine: 'gromacs',
+  jobName: 'golden_md',
+  partition: 'gpu',
+  nodes: 1,
+  gpus: 1,
+  cpusPerTask: 8,
+  walltime: '02:00:00',
+  memory: '16G',
+  modules: ['gromacs/2024', 'cuda/12.4'],
+  tpr: 'topol.tpr',
+  deffnm: 'md',
+  maxh: 1.8,
+  appendCheckpoint: true
+});
+assert.match(gromacs.script, /#SBATCH --job-name=golden_md/);
+assert.match(gromacs.script, /#SBATCH --gres=gpu:1/);
+assert.match(gromacs.script, /module load gromacs\/2024/);
+assert.match(gromacs.script, /gmx mdrun -s topol\.tpr -deffnm md/);
+assert.match(gromacs.script, /-cpi md\.cpt -append/);
+assert.equal(gromacs.warnings.filter(item => item.level === 'error').length, 0);
+const allocation = Slurm.estimateCoreHours({
+  engine: 'gromacs', nodes: 1, cpusPerTask: 8, walltime: '02:00:00'
+});
+assert.deepEqual(allocation, { coreHours: 16, hours: 2, cores: 8 });
+
+const invalidWalltime = Slurm.generateScript({
+  engine: 'lammps',
+  jobName: 'bad_time',
+  nodes: 1,
+  tasksPerNode: 4,
+  cpusPerTask: 1,
+  walltime: 'not-a-time',
+  memory: '4G',
+  input: 'in.lammps'
+});
+assert.match(invalidWalltime.script, /#SBATCH --time=24:00:00/);
+assert.ok(invalidWalltime.warnings.some(item => /Wall time looks malformed/.test(item.message)));
 
 console.log('STEMKit scientific golden fixtures: ok');
