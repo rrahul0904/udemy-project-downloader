@@ -2,11 +2,17 @@
 
 Study Lab is the local-first scientific and research workbench inside Course Intelligence. It keeps compatible course files inside the application boundary and runs core calculations in browser JavaScript where practical.
 
+## Reference project
+
+- Upstream: https://github.com/LD-Shell/stemkit
+- Package: `@stemkit/core`
+- License: MIT
+
+The original Study Lab shipped as a **functional integrated MVP**. The current parity work keeps that integrated product surface while replacing lightweight scientific approximations with the tested upstream STEMKit computational core where practical.
+
 ## Current tool catalog
 
 The existing catalog contains 21 tools spanning descriptive data work, plotting/digitization, molecular formats/workflows, writing/citation helpers, scientific unit conversion, and study utilities.
-
-The original Study Lab shipped as a **functional integrated MVP**. The current parity work keeps that integrated product surface while replacing lightweight scientific approximations with the tested upstream STEMKit computational core where practical.
 
 ## STEMKit migration status
 
@@ -19,8 +25,9 @@ Certified in the current phase:
 - **Scientific Converter** — vendored 10-category unit database and CODATA/SI conversions with deterministic fixtures.
 - **LaTeX Table Builder** — vendored table parsing/generation with escaping fixtures.
 - **Plot Digitizer** — vendored calibrated pixel-to-data mapping with explicit pixel endpoints, linear/log axes, validation, pixel-resolution reporting, calibrated-region visualization, and CSV copy.
+- **MD Workflow Generator / SLURM** — vendored SLURM generation is now wired for GROMACS and LAMMPS with resource validation, job-array handling, memory/wall-time warnings, checkpoint-aware GROMACS commands, and allocation estimates.
 
-The browser integration layer now includes `app/static/study-lab-adapters/digitizer.js`. The adapter owns interaction/rendering state while numerical calibration behavior stays in the vendored core.
+The browser integration layer now includes `app/static/study-lab-adapters/digitizer.js` and `app/static/study-lab-adapters/slurm.js`. These adapters own interaction/rendering state while numerical and script-generation behavior stays in the vendored core.
 
 ## Verification
 
@@ -29,16 +36,16 @@ The browser integration layer now includes `app/static/study-lab-adapters/digiti
 - Python unit tests and compilation;
 - top-level JavaScript syntax checks plus recursive checks for nested Study Lab/vendor modules;
 - no-dependency STEMKit module smoke coverage;
-- deterministic STEMKit golden fixtures covering XVG, structure, units, LaTeX, and digitizer behavior.
+- deterministic STEMKit golden fixtures covering XVG, structure, units, LaTeX, digitizer, and SLURM behavior.
 
-Playwright additionally verifies browser-runtime STEMKit loading and the calibrated digitizer lifecycle, including fail-closed invalid calibration and reopening the tool after switching workspaces.
+Playwright verifies browser-runtime STEMKit loading and the calibrated digitizer lifecycle. The SLURM adapter also has repository contract tests ensuring the Study Lab UI is wired to the vendored generator and allocation estimator.
 
 ## Deliberately incomplete parity
 
 Study Lab is not yet a claim of full STEMKit parity. Remaining staged work includes:
 
 - full PDB/GRO/XYZ structure editing and conversion;
-- SLURM and PLUMED workflow adapters;
+- version-aware PLUMED workflow adapter;
 - atom selection and spatial queries;
 - journals/ISO-4 with an LTWA data source;
 - dependency-injected statistics, outliers, curve fitting, data cleaning, BibTeX, and error-bar inference;
