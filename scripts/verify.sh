@@ -26,6 +26,7 @@ if command -v node >/dev/null 2>&1; then
   node scripts/verify_stemkit_golden.mjs
   node scripts/verify_stemkit_structure_golden.mjs
   node scripts/verify_stemkit_journal_golden.mjs
+  node scripts/verify_stemkit_curve_golden.mjs
 else
   echo 'Node is unavailable; JavaScript syntax checks were not run.' >&2
   exit 1
