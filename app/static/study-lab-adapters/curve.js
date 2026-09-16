@@ -62,14 +62,25 @@ function addModelPicker(panel) {
     <div class="field"><span>Scientific engine</span><div class="status" data-curve-engine-status>Loading local regression.js…</div></div>`;
   actions.before(wrap);
   const run = actions.querySelector('[data-action="run"]');
-  if (run) run.textContent = 'Fit curve';
+  if (run) {
+    run.textContent = 'Loading curve engine…';
+    run.disabled = true;
+  }
 
   ensureRegression().then(() => {
     const status = panel.querySelector('[data-curve-engine-status]');
     if (status) status.textContent = 'STEMKit core + regression.js 2.0.1';
+    if (run) {
+      run.textContent = 'Fit curve';
+      run.disabled = false;
+    }
   }).catch((err) => {
     const status = panel.querySelector('[data-curve-engine-status]');
     if (status) status.textContent = `Legacy linear fallback only: ${err.message}`;
+    if (run) {
+      run.textContent = 'Fit line (fallback)';
+      run.disabled = false;
+    }
   });
 }
 
