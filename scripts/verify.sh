@@ -18,6 +18,15 @@ if command -v node >/dev/null 2>&1; then
     echo "Checking ${asset}"
     node --check "${asset}"
   done
+  while IFS= read -r -d '' asset; do
+    echo "Checking ${asset}"
+    node --check "${asset}"
+  done < <(find app/static -mindepth 2 -type f -name '*.js' -print0)
+  node scripts/verify_stemkit_core.mjs
+  node scripts/verify_stemkit_golden.mjs
+  node scripts/verify_stemkit_structure_golden.mjs
+  node scripts/verify_stemkit_journal_golden.mjs
+  node scripts/verify_stemkit_curve_golden.mjs
 else
   echo 'Node is unavailable; JavaScript syntax checks were not run.' >&2
   exit 1

@@ -1,134 +1,58 @@
-# Study Lab — STEMKit-Inspired Integration
+# Study Lab
 
-## Purpose
-
-Study Lab extends the existing Local Media Downloader into a local course-and-research workspace. It is designed to let a user archive authorized Udemy/YouTube course material and then open compatible downloaded text/data files directly inside lightweight analysis and study tools.
-
-The integration deliberately preserves the downloader's existing authorization, URL validation, cookie handling, job management, and download storage behavior. Study Lab is an additive feature served at `/lab`.
+Study Lab is the local-first scientific and research workbench inside Course Intelligence. It keeps compatible course files inside the application boundary and runs core calculations in browser JavaScript where practical.
 
 ## Reference project
 
-The design and tool inventory were informed by the public STEMKit project:
+- Upstream: https://github.com/LD-Shell/stemkit
+- Package: `@stemkit/core`
+- License: MIT
 
-- Reference repository: `https://github.com/LD-Shell/stemkit`
-- User-provided legacy/redirecting URL: `https://github.com/danielravina/stemkit`
-- License: MIT (see the upstream repository's `LICENSE`)
+The original Study Lab shipped as a **functional integrated MVP**. The current parity work keeps that integrated product surface while replacing lightweight scientific approximations with the tested upstream STEMKit computational core where practical.
 
-This integration does **not** vendor STEMKit's source tree, generated site, fonts, large dependency bundles, or third-party libraries. The current Study Lab code is an independent implementation of selected workflows and interaction patterns. If upstream source code is copied in a future wave, its MIT copyright/license notice must be preserved with the copied material.
+## Current tool catalog
 
-## Architecture
+The existing catalog contains 21 tools spanning descriptive data work, plotting/digitization, molecular formats/workflows, writing/citation helpers, scientific unit conversion, and study utilities.
 
-```text
-FastAPI app
-├── /                       existing downloader UI
-├── /lab                    Study Lab UI
-├── /api/downloads          existing local download inventory
-└── /files/{relative_path}  existing guarded local-file serving route
+## STEMKit migration status
 
-Browser
-├── lab.html                catalog + active-tool workspace
-├── lab.css                 responsive Study Lab design
-└── lab.js                  local computations and course-file bridge
-```
+The dependency-free STEMKit phase now has browser adapters and deterministic certification for the scientific/HPC surfaces we selected:
 
-Study Lab's computational tools run in the browser. The only Study Lab operation that intentionally reaches an external service is DOI → BibTeX, which calls Crossref after an explicit user action.
+- **XVG Visualizer** — vendored parser and sample column statistics with golden fixtures.
+- **Structure Inspector / Coordinate Manipulator** — vendored PDB/GRO/XYZ parsing, molecular mass/geometry/Rg statistics, format conversion, centering, rotation, scaling, translation, and unit-aware serialization. Structure Inspector also exposes vendored atom-selection expressions, named groups, residue expansion, and spatial `within:` queries.
+- **Scientific Converter** — vendored 10-category unit database and CODATA/SI conversions with deterministic fixtures.
+- **LaTeX Table Builder** — vendored table parsing/generation with escaping fixtures.
+- **Plot Digitizer** — vendored calibrated pixel-to-data mapping with explicit pixel endpoints, linear/log axes, validation, pixel-resolution reporting, calibrated-region visualization, and CSV copy.
+- **MD Workflow Generator / SLURM** — vendored SLURM generation is wired for GROMACS and LAMMPS with resource validation, job-array handling, memory/wall-time warnings, checkpoint-aware GROMACS commands, and allocation estimates.
+- **MD Workflow Generator / PLUMED** — vendored PLUMED generation is wired for 2.9/2.10 targets with Distance, Torsion, Coordination, and Dihedral-correlation CVs; rational switching functions; metadynamics, OPES, restraint, moving-restraint, and wall biases; MOLINFO/UNITS/PRINT; target-version fallbacks; and warnings surfaced as comments rather than silently ignored.
+- **Journal Abbreviator / ISO-4** — whole-title abbreviation now runs through the vendored journal normalization/matching core. ISO-4 word-level abbreviation uses the vendored LTWA parser/matcher but requires a local LTWA CSV/TSV file that the user is permitted to use. The ISSN LTWA dataset is intentionally not bundled because its distribution terms are separate from STEMKit's MIT license.
 
-## Course-material bridge
+The browser integration layer includes thin adapters under `app/static/study-lab-adapters/` for digitizer, SLURM, PLUMED, structure/selection, and journals/ISO-4. These adapters own interaction/rendering state while scientific parsing, geometry, selection, validation, abbreviation, and script-generation behavior stays in the vendored core.
 
-Study Lab reads the existing `/api/downloads` inventory and offers compatible local files for loading into an active text-based tool. The first implementation recognizes:
+## Verification
 
-- `.txt`
-- `.csv`
-- `.tsv`
-- `.md`
-- `.json`
-- `.xvg`
-- `.pdb`
-- `.gro`
-- `.bib`
-- `.dat`
-- `.log`
+`bash scripts/verify.sh` performs the canonical repository checks and includes:
 
-Files continue to be served through the downloader's existing guarded `/files/{relative_path}` endpoint; Study Lab does not introduce a second filesystem API.
+- Python unit tests and compilation;
+- top-level JavaScript syntax checks plus recursive checks for nested Study Lab/vendor modules;
+- no-dependency STEMKit module smoke coverage;
+- deterministic STEMKit golden fixtures covering XVG, structure, selection, units, LaTeX, digitizer, SLURM, PLUMED, journals, and ISO-4 behavior.
 
-## Implemented tool inventory
+Playwright verifies browser-runtime STEMKit loading, calibrated digitization, PLUMED version-aware generation, XYZ selection/conversion, coordinate transformation/GRO serialization, editable whole-title journal rules, and local-only LTWA upload for ISO-4. Repository contract tests ensure the Study Lab UI is wired to vendored STEMKit modules rather than duplicate local implementations.
 
-### Data and statistics
+## Deliberately incomplete parity
 
-1. Statistics Calculator
-2. Data Cleaner
-3. Outlier Detector
-4. Curve Fitter
-5. Error-Bar Generator
-6. Plot Builder
-7. Plot Digitizer
+Study Lab is not yet a claim of full STEMKit parity. Remaining staged work is now concentrated in modules that require dependency injection:
 
-### Molecular / simulation helpers
+- statistics and outlier inference through jStat;
+- curve fitting through regression.js;
+- data cleaning through Papa Parse;
+- BibTeX parsing/deduplication through bibtexParse;
+- error-bar inference through jStat;
+- course-aware persistence/provenance of reproducible scientific artifacts.
 
-8. XVG Visualizer
-9. Structure Inspector
-10. Coordinate Manipulator
-11. MD Workflow Generator
+See `docs/STEMKIT_CORE_REVERSE_ENGINEERING.md` and `docs/STEMKIT_PARITY_AUDIT.md` for the detailed phase boundary and next implementation order.
 
-### Writing / citations
+## Safety and scope
 
-12. BibTeX Sanitizer
-13. BibTeX Deduplicator
-14. DOI → BibTeX
-15. Journal Abbreviator
-16. LaTeX Table Builder
-17. Equation Builder
-
-### Scientific units
-
-18. Scientific Converter
-
-### Study helpers
-
-19. Pomodoro Timer
-20. Decision Matrix
-21. Kinetics Sandbox
-
-## Parity status
-
-The current wave is a functional integrated MVP, not a scientific-equivalence claim.
-
-| Capability | Current status | Follow-up for high-fidelity parity |
-| --- | --- | --- |
-| Descriptive statistics | Functional local implementation | Add richer hypothesis tests/distributions and golden numerical fixtures |
-| Data cleaning | Functional basic implementation | Add typed CSV parsing, column-aware transformations, larger-file handling |
-| Outlier detection | IQR and z-score | Add upstream method coverage and validation fixtures |
-| Curve fitting | Linear OLS | Add nonlinear models, uncertainty, residual diagnostics |
-| Error bars | Mean/SD/SEM/approx. 95% CI | Add configurable confidence intervals and statistical assumptions |
-| Plot builder | Lightweight SVG | Add richer axes, labels, exports, series, and publication controls |
-| Plot digitizer | Manual full-image coordinate mapping | Add calibrated axes, crop/axis anchors, log axes, automated extraction |
-| XVG | First numeric series parser/plot | Add metadata, multiple datasets, legends, Grace semantics |
-| PDB inspection | Atom/residue/chain/bounds summary | Add rich molecular visualization and selection language |
-| Coordinate editing | Translation | Add rotation, centering, alignment, selections, format breadth |
-| MD workflow | Starter GROMACS/LAMMPS/PLUMED text | Add validated templates, parameter schemas, Slurm/HPC generation |
-| BibTeX sanitizer | Basic normalization | Port/independently reproduce full field parsing and validation behavior |
-| BibTeX dedupe | DOI/title heuristic | Add robust parser, fuzzy matching, merge strategies |
-| DOI lookup | Crossref transform endpoint | Add metadata fallback, retries, rate-limit/user-agent handling |
-| Journal abbreviation | Small heuristic dictionary | Add authoritative LTWA/ISO-4 data and complete journal dataset |
-| LaTeX table | Basic CSV/tabular conversion | Add alignment, escaping breadth, booktabs, merged cells |
-| Equation builder | Snippet wrapper | Add live math rendering/editor controls |
-| Unit conversion | Common length/energy/pressure/temp | Add full STEMKit unit catalog and dimensional metadata |
-| Pomodoro | Functional | Add notifications/audio/preferences if desired |
-| Decision matrix | Unweighted numeric sum/mean | Add criteria weights, benefit/cost directions, sensitivity |
-| Kinetics | First-order decay | Add reaction-order/models and parameter sweeps |
-
-## Product direction
-
-The useful product is broader than a downloader clone: an offline-first **course workspace** where imported lessons, subtitles, practice-test exports, notes, data files, and scientific utilities are connected.
-
-Recommended next waves:
-
-1. **Course Library** — model each archived course, section, lecture, transcript, attachment, and practice set as browsable local content.
-2. **Study Workspace** — transcript search, bookmarks, notes, flashcards, practice mode, progress, and tool deep-links.
-3. **STEM tool parity** — replace simplified implementations with thoroughly tested core modules and upstream-compatible fixtures where valuable.
-4. **AI-assisted learning (optional)** — local/configurable model provider for transcript Q&A, explanations, quiz generation, and course-grounded study plans, with explicit privacy controls.
-5. **Production hardening** — CSP, browser tests, larger-file handling, import/export schema, structured local persistence, accessibility and performance budgets.
-
-## Scientific-use warning
-
-The Study Lab utilities are learning/research helpers. Simplified numerical, molecular, citation, and simulation tools must be independently validated before they are used for publication-critical, safety-critical, clinical, engineering, or production scientific decisions.
+Study Lab is a learning and research helper. Scientific outputs should be independently checked when used for consequential research decisions, and deferred modules should not be represented as parity-complete until their adapters and fixtures are present.
