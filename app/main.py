@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 
 from .api_v1 import build_api_v1
 from .database import CourseStore
-from .jobs import JobConfig, JobManager, SUPPORTED_BROWSER_COOKIES, disk_usage
+from .jobs import JobConfig, JobManager, SUPPORTED_BROWSER_COOKIES, disk_usage, validate_job_config
 from .learning_library import load_transcript, search_transcript
 from .safety import UrlValidationError, normalize_supported_url
 
@@ -305,6 +305,17 @@ async def create_job(
     auto_subtitles: bool = Form(False),
     subtitle_languages: str = Form("en.*"),
     include_practice_tests: bool = Form(True),
+    media_mode: str = Form("video"),
+    audio_format: str = Form("mp3"),
+    normalize_audio: bool = Form(False),
+    sponsorblock: bool = Form(False),
+    trim_start: str = Form("", max_length=12),
+    trim_end: str = Form("", max_length=12),
+    speed_limit: str = Form("", max_length=16),
+    concurrent_fragments: int = Form(4),
+    output_container: str = Form("mp4"),
+    subtitle_format: str = Form("best"),
+    playlist_items: str = Form("", max_length=120),
     confirm_authorized: bool = Form(False),
 ) -> dict[str, Any]:
     _enforce_job_rate_limit(request)
@@ -349,7 +360,22 @@ async def create_job(
         auto_subtitles=auto_subtitles,
         subtitle_languages=subtitle_languages,
         include_practice_tests=include_practice_tests if normalized.platform == "udemy" else False,
+        media_mode=media_mode.strip().lower(),
+        audio_format=audio_format.strip().lower(),
+        normalize_audio=normalize_audio,
+        sponsorblock=sponsorblock,
+        trim_start=trim_start.strip(),
+        trim_end=trim_end.strip(),
+        speed_limit=speed_limit.strip().upper(),
+        concurrent_fragments=concurrent_fragments,
+        output_container=output_container.strip().lower(),
+        subtitle_format=subtitle_format.strip().lower(),
+        playlist_items=playlist_items.strip(),
     )
+    try:
+        validate_job_config(config)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     job = await manager.create_job(config, cookies_bytes)
     return job.as_dict()
 
