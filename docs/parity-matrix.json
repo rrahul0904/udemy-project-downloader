@@ -1,36 +1,617 @@
 {
   "version": 2,
-  "generated": "2026-09-02",
-  "statuses": ["EXACT", "FUNCTIONAL_EQUIVALENT", "PARTIAL", "MISSING", "INTENTIONALLY_EXCLUDED", "NOT_APPLICABLE"],
+  "generated": "2026-09-30",
+  "statuses": [
+    "EXACT",
+    "FUNCTIONAL_EQUIVALENT",
+    "PARTIAL",
+    "MISSING",
+    "INTENTIONALLY_EXCLUDED",
+    "NOT_APPLICABLE"
+  ],
   "capabilities": [
-    {"reference":"YouTubeTranscript.dev","area":"acquisition","feature":"YouTube URL and video ingestion","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/safety.py","app/jobs.py","app/static/index.html"],"tests":["tests/test_safety.py","tests/e2e/production.spec.mjs"],"notes":"Authorized YouTube video and playlist URL flow exists; bare video-ID input remains a minor gap.","priority":"P0","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"acquisition","feature":"manual and automatic captions","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/jobs.py","app/learning_library.py","app/database.py"],"tests":["tests/test_course_intelligence.py","tests/test_course_model_v2.py"],"notes":"yt-dlp subtitle acquisition, normalization and local parsing are implemented.","priority":"P0","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"acquisition","feature":"ASR fallback and explicit ASR","status":"MISSING","implementation":["app/providers.py"],"tests":[],"notes":"TranscriptionProvider abstraction exists, but no functional ASR provider or asynchronous transcription job is enabled yet.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"acquisition","feature":"uploaded media transcription","status":"MISSING","implementation":["app/providers.py"],"tests":[],"notes":"Add guarded local media import plus an optional functional TranscriptionProvider; signed cloud uploads are not required for local mode.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"acquisition","feature":"language/source transcript variants and translation","status":"PARTIAL","implementation":["app/database.py","app/api_v1.py","app/static/viewer.js"],"tests":["tests/test_course_model_v2.py","tests/e2e/production.spec.mjs"],"notes":"Multiple language/source/version variants with provenance and source switching are implemented; translation generation itself is not yet implemented.","priority":"P0","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"acquisition","feature":"word timestamps, paragraphs and ASR intelligence","status":"MISSING","implementation":[],"tests":[],"notes":"Preserve optional word/paragraph structures and provider intelligence without requiring them for local subtitle parsing.","priority":"P2","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"library","feature":"persistent searchable transcript library","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/database.py","app/static/home.js","app/static/learn.js"],"tests":["tests/test_production_store.py","tests/e2e/production.spec.mjs"],"notes":"SQLite + FTS5 backed library, Library/Home command center and lesson workspace are implemented.","priority":"P0","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"library","feature":"status language and date filters","status":"PARTIAL","implementation":["app/database.py","app/static/learn.js"],"tests":["tests/test_production_store.py"],"notes":"Language/source metadata and course filtering exist; a complete status/language/date faceted filter UI is still missing.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"library","feature":"transcript deletion and bulk deletion","status":"MISSING","implementation":[],"tests":[],"notes":"Add explicit metadata/FTS deletion without unexpectedly deleting source media.","priority":"P2","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"bulk","feature":"playlist ingestion","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/safety.py","app/jobs.py"],"tests":["tests/test_safety.py"],"notes":"yt-dlp playlist archive jobs exist; metadata preview/select parity is not complete.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"bulk","feature":"channel resolution with preview selection and limits","status":"MISSING","implementation":[],"tests":["tests/test_safety.py"],"notes":"Channel-wide URLs remain intentionally rejected until preview, selection, limits, rate controls and disk warnings are implemented.","priority":"P2","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"viewer","feature":"synchronized embedded media player and transcript","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/static/viewer.html","app/static/viewer.js","app/api_v1.py"],"tests":["tests/test_api_v1.py","tests/e2e/production.spec.mjs"],"notes":"Embedded local media, transcript-to-media seek, media-to-transcript synchronization, active highlighting, auto-scroll, deep links and durable progress are implemented.","priority":"P0","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"viewer","feature":"source/language selector and subtitle customization","status":"PARTIAL","implementation":["app/static/viewer.html","app/static/viewer.js"],"tests":["tests/e2e/production.spec.mjs"],"notes":"Transcript source/language variant selection and timestamp/auto-scroll preferences are implemented; full subtitle overlay font/color/position customization is not.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"learning","feature":"editable durable personal notes and bookmarks","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/database.py","app/static/learn.js","app/static/viewer.js"],"tests":["tests/test_production_store.py","tests/e2e/production.spec.mjs"],"notes":"Durable personal notes, autosave, timestamp bookmarks and viewer source anchors are implemented separately from generated artifacts.","priority":"P0","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"learning","feature":"structured cited generated notes and summaries","status":"PARTIAL","implementation":["app/providers.py","app/study_store.py","app/study_service.py","app/static/learn-study.js"],"tests":["tests/test_study_artifacts.py","tests/e2e/production.spec.mjs"],"notes":"Deterministic local cited notes with versioned artifacts and normalized citations are implemented; editable generated-note overlays and richer provider-driven summarization remain.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"learning","feature":"flashcards with timestamp citations","status":"PARTIAL","implementation":["app/providers.py","app/study_store.py","app/static/learn-study.js"],"tests":["tests/test_study_artifacts.py","tests/test_course_intelligence_os_ui.py"],"notes":"Source-cited Q/A cards and reveal UI are implemented; card editing, exports and durable review scheduling remain.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"learning","feature":"spaced repetition and mastery","status":"MISSING","implementation":["app/database.py","app/static/learn-study.js"],"tests":[],"notes":"Review rating controls are explicitly visual-only; implement and test SM-2 or FSRS review history, due dates and mastery before claiming this capability.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"learning","feature":"mixed MCQ and short-answer quiz with cited explanations","status":"PARTIAL","implementation":["app/providers.py","app/study_store.py","app/static/learn-study.js"],"tests":["tests/test_study_artifacts.py","tests/test_course_intelligence_os_ui.py"],"notes":"Source-grounded MCQ and short-answer practice is implemented; durable attempts, score history, editing and weak-topic analytics remain.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"learning","feature":"concept map and grounded tutor","status":"PARTIAL","implementation":["app/providers.py","app/study_service.py","app/static/learn-study.js"],"tests":["tests/test_study_artifacts.py","tests/e2e/production.spec.mjs"],"notes":"A lightweight cited concept graph and COURSE_GROUNDED evidence Q&A are implemented; richer graph interaction and optional semantic retrieval remain.","priority":"P1","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"export","feature":"transcript TXT JSON SRT VTT export","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/transcript_export.py","app/api_v1.py","app/static/viewer.html"],"tests":["tests/test_api_v1.py","tests/e2e/production.spec.mjs"],"notes":"Deterministic TXT/JSON/SRT/VTT exports from normalized transcript segments are implemented.","priority":"P0","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"developer","feature":"versioned API OpenAPI MCP and automation examples","status":"PARTIAL","implementation":["app/api_v1.py","app/main.py"],"tests":["tests/test_api_v1.py"],"notes":"Stable /api/v1 and OpenAPI are implemented; MCP and automation examples remain.","priority":"P2","tracking":"parity-master"},
-    {"reference":"YouTubeTranscript.dev","area":"commercial","feature":"credits billing and hosted multi-tenancy","status":"INTENTIONALLY_EXCLUDED","implementation":[],"tests":[],"notes":"The current product is private/local-first; commercial parity must not block the learning product.","priority":"P3","tracking":"decision:local-first"},
-    {"reference":"STEMKit","area":"study-lab","feature":"18 research tools plus 3 workflow helpers inventory","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/static/lab.html","app/static/lab.js","app/static/lab-ui.js"],"tests":["tests/test_study_lab.py","tests/test_course_intelligence_os_ui.py","tests/e2e/production.spec.mjs"],"notes":"All 21 tool surfaces remain present, with category filters, recent-tool navigation and downloaded-file bridge; scientific fidelity varies by tool.","priority":"P1","tracking":"parity-master"},
-    {"reference":"STEMKit","area":"engineering","feature":"DOM-free reusable computational core and independent numerical validation","status":"MISSING","implementation":[],"tests":["tests/test_study_lab.py"],"notes":"Extract computations into modules used by UI/tests and add substantive independent reference/golden fixtures.","priority":"P1","tracking":"parity-master"},
-    {"reference":"STEMKit","area":"scientific-fidelity","feature":"statistics outliers curve fitting error bars molecular MD/HPC BibTeX ISO-4 units and digitizer depth","status":"PARTIAL","implementation":["app/static/lab.js"],"tests":["tests/test_study_lab.py"],"notes":"Current Study Lab intentionally implements simplified MVP behavior; close high-value numerical and reproducibility gaps module by module.","priority":"P1","tracking":"parity-master"},
-    {"reference":"Local-first","area":"model","feature":"Course Section Lesson normalized hierarchy","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/database.py","app/api_v1.py"],"tests":["tests/test_course_model_v2.py"],"notes":"Normalized course/section/lesson hierarchy is populated during reconciliation and exposed through the application model.","priority":"P0","tracking":"parity-master"},
-    {"reference":"Local-first","area":"model","feature":"transcript provenance versions and first-class attachments","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/database.py","app/api_v1.py","app/static/learn.js"],"tests":["tests/test_course_model_v2.py","tests/test_api_v1.py"],"notes":"Schema migration supports multiple transcript variants/provenance and indexed attachment metadata while guarded file serving remains the byte boundary.","priority":"P0","tracking":"parity-master"},
-    {"reference":"Local-first","area":"ui","feature":"learning library command center and Acquire Learn Work information architecture","status":"FUNCTIONAL_EQUIVALENT","implementation":["app/static/os.css","app/static/home.html","app/static/index.html","app/static/learn.html","app/static/viewer.html","app/static/lab.html","app/static/files.html","app/static/settings.html"],"tests":["tests/test_course_intelligence_os_ui.py","tests/e2e/production.spec.mjs"],"notes":"Course Intelligence OS shell, light/dark themes, Home/Library command center, authorized Acquire flow, Learn workspace, Work/Study Lab, Files and Settings are implemented responsively.","priority":"P0","tracking":"ui-course-intelligence-os"},
-    {"reference":"Local-first","area":"portability","feature":"versioned backup and import","status":"MISSING","implementation":[],"tests":[],"notes":"Add metadata backup/import with schema version checks; exclude large media blobs by default.","priority":"P2","tracking":"parity-master"}
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "acquisition",
+      "feature": "YouTube URL and video ingestion",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/safety.py",
+        "app/jobs.py",
+        "app/static/index.html"
+      ],
+      "tests": [
+        "tests/test_safety.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Authorized YouTube video and playlist URL flow exists; bare video-ID input remains a minor gap.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "acquisition",
+      "feature": "manual and automatic captions",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/jobs.py",
+        "app/learning_library.py",
+        "app/database.py"
+      ],
+      "tests": [
+        "tests/test_course_intelligence.py",
+        "tests/test_course_model_v2.py"
+      ],
+      "notes": "yt-dlp subtitle acquisition, normalization and local parsing are implemented.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "acquisition",
+      "feature": "ASR fallback and explicit ASR",
+      "status": "MISSING",
+      "implementation": [
+        "app/providers.py"
+      ],
+      "tests": [],
+      "notes": "TranscriptionProvider abstraction exists, but no functional ASR provider or asynchronous transcription job is enabled yet.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "acquisition",
+      "feature": "uploaded media transcription",
+      "status": "MISSING",
+      "implementation": [
+        "app/providers.py"
+      ],
+      "tests": [],
+      "notes": "Add guarded local media import plus an optional functional TranscriptionProvider; signed cloud uploads are not required for local mode.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "acquisition",
+      "feature": "language/source transcript variants and translation",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/database.py",
+        "app/api_v1.py",
+        "app/static/viewer.js"
+      ],
+      "tests": [
+        "tests/test_course_model_v2.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Multiple language/source/version variants with provenance and source switching are implemented; translation generation itself is not yet implemented.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "acquisition",
+      "feature": "word timestamps, paragraphs and ASR intelligence",
+      "status": "MISSING",
+      "implementation": [],
+      "tests": [],
+      "notes": "Preserve optional word/paragraph structures and provider intelligence without requiring them for local subtitle parsing.",
+      "priority": "P2",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "library",
+      "feature": "persistent searchable transcript library",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/database.py",
+        "app/static/home.js",
+        "app/static/learn.js"
+      ],
+      "tests": [
+        "tests/test_production_store.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "SQLite + FTS5 backed library, Library/Home command center and lesson workspace are implemented.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "library",
+      "feature": "status language and date filters",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/database.py",
+        "app/static/learn.js"
+      ],
+      "tests": [
+        "tests/test_production_store.py"
+      ],
+      "notes": "Language/source metadata and course filtering exist; a complete status/language/date faceted filter UI is still missing.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "library",
+      "feature": "transcript deletion and bulk deletion",
+      "status": "MISSING",
+      "implementation": [],
+      "tests": [],
+      "notes": "Add explicit metadata/FTS deletion without unexpectedly deleting source media.",
+      "priority": "P2",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "bulk",
+      "feature": "playlist ingestion",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/safety.py",
+        "app/jobs.py"
+      ],
+      "tests": [
+        "tests/test_safety.py"
+      ],
+      "notes": "yt-dlp playlist archive jobs exist; metadata preview/select parity is not complete.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "bulk",
+      "feature": "channel resolution with preview selection and limits",
+      "status": "MISSING",
+      "implementation": [],
+      "tests": [
+        "tests/test_safety.py"
+      ],
+      "notes": "Channel-wide URLs remain intentionally rejected until preview, selection, limits, rate controls and disk warnings are implemented.",
+      "priority": "P2",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "viewer",
+      "feature": "synchronized embedded media player and transcript",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/static/viewer.html",
+        "app/static/viewer.js",
+        "app/api_v1.py"
+      ],
+      "tests": [
+        "tests/test_api_v1.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Embedded local media, transcript-to-media seek, media-to-transcript synchronization, active highlighting, auto-scroll, deep links and durable progress are implemented.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "viewer",
+      "feature": "source/language selector and subtitle customization",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/static/viewer.html",
+        "app/static/viewer.js"
+      ],
+      "tests": [
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Transcript source/language variant selection and timestamp/auto-scroll preferences are implemented; full subtitle overlay font/color/position customization is not.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "learning",
+      "feature": "editable durable personal notes and bookmarks",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/database.py",
+        "app/static/learn.js",
+        "app/static/viewer.js"
+      ],
+      "tests": [
+        "tests/test_production_store.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Durable personal notes, autosave, timestamp bookmarks and viewer source anchors are implemented separately from generated artifacts.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "learning",
+      "feature": "structured cited generated notes and summaries",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/providers.py",
+        "app/study_store.py",
+        "app/study_service.py",
+        "app/static/learn-study.js"
+      ],
+      "tests": [
+        "tests/test_study_artifacts.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Deterministic local cited notes with versioned artifacts and normalized citations are implemented; editable generated-note overlays and richer provider-driven summarization remain.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "learning",
+      "feature": "flashcards with timestamp citations",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/providers.py",
+        "app/study_store.py",
+        "app/static/learn-study.js"
+      ],
+      "tests": [
+        "tests/test_study_artifacts.py",
+        "tests/test_course_intelligence_os_ui.py"
+      ],
+      "notes": "Source-cited Q/A cards and reveal UI are implemented; card editing, exports and durable review scheduling remain.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "learning",
+      "feature": "spaced repetition and mastery",
+      "status": "MISSING",
+      "implementation": [
+        "app/database.py",
+        "app/static/learn-study.js"
+      ],
+      "tests": [],
+      "notes": "Review rating controls are explicitly visual-only; implement and test SM-2 or FSRS review history, due dates and mastery before claiming this capability.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "learning",
+      "feature": "mixed MCQ and short-answer quiz with cited explanations",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/providers.py",
+        "app/study_store.py",
+        "app/static/learn-study.js"
+      ],
+      "tests": [
+        "tests/test_study_artifacts.py",
+        "tests/test_course_intelligence_os_ui.py"
+      ],
+      "notes": "Source-grounded MCQ and short-answer practice is implemented; durable attempts, score history, editing and weak-topic analytics remain.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "learning",
+      "feature": "concept map and grounded tutor",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/providers.py",
+        "app/study_service.py",
+        "app/static/learn-study.js"
+      ],
+      "tests": [
+        "tests/test_study_artifacts.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "A lightweight cited concept graph and COURSE_GROUNDED evidence Q&A are implemented; richer graph interaction and optional semantic retrieval remain.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "export",
+      "feature": "transcript TXT JSON SRT VTT export",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/transcript_export.py",
+        "app/api_v1.py",
+        "app/static/viewer.html"
+      ],
+      "tests": [
+        "tests/test_api_v1.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Deterministic TXT/JSON/SRT/VTT exports from normalized transcript segments are implemented.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "developer",
+      "feature": "versioned API OpenAPI MCP and automation examples",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/api_v1.py",
+        "app/main.py"
+      ],
+      "tests": [
+        "tests/test_api_v1.py"
+      ],
+      "notes": "Stable /api/v1 and OpenAPI are implemented; MCP and automation examples remain.",
+      "priority": "P2",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTubeTranscript.dev",
+      "area": "commercial",
+      "feature": "credits billing and hosted multi-tenancy",
+      "status": "INTENTIONALLY_EXCLUDED",
+      "implementation": [],
+      "tests": [],
+      "notes": "The current product is private/local-first; commercial parity must not block the learning product.",
+      "priority": "P3",
+      "tracking": "decision:local-first"
+    },
+    {
+      "reference": "STEMKit",
+      "area": "study-lab",
+      "feature": "18 research tools plus 3 workflow helpers inventory",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/static/lab.html",
+        "app/static/lab.js",
+        "app/static/lab-ui.js"
+      ],
+      "tests": [
+        "tests/test_study_lab.py",
+        "tests/test_course_intelligence_os_ui.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "All 21 tool surfaces remain present, with category filters, recent-tool navigation and downloaded-file bridge; scientific fidelity varies by tool.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "STEMKit",
+      "area": "engineering",
+      "feature": "DOM-free reusable computational core and independent numerical validation",
+      "status": "MISSING",
+      "implementation": [],
+      "tests": [
+        "tests/test_study_lab.py"
+      ],
+      "notes": "Extract computations into modules used by UI/tests and add substantive independent reference/golden fixtures.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "STEMKit",
+      "area": "scientific-fidelity",
+      "feature": "statistics outliers curve fitting error bars molecular MD/HPC BibTeX ISO-4 units and digitizer depth",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/static/lab.js"
+      ],
+      "tests": [
+        "tests/test_study_lab.py"
+      ],
+      "notes": "Current Study Lab intentionally implements simplified MVP behavior; close high-value numerical and reproducibility gaps module by module.",
+      "priority": "P1",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "Local-first",
+      "area": "model",
+      "feature": "Course Section Lesson normalized hierarchy",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/database.py",
+        "app/api_v1.py"
+      ],
+      "tests": [
+        "tests/test_course_model_v2.py"
+      ],
+      "notes": "Normalized course/section/lesson hierarchy is populated during reconciliation and exposed through the application model.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "Local-first",
+      "area": "model",
+      "feature": "transcript provenance versions and first-class attachments",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/database.py",
+        "app/api_v1.py",
+        "app/static/learn.js"
+      ],
+      "tests": [
+        "tests/test_course_model_v2.py",
+        "tests/test_api_v1.py"
+      ],
+      "notes": "Schema migration supports multiple transcript variants/provenance and indexed attachment metadata while guarded file serving remains the byte boundary.",
+      "priority": "P0",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "Local-first",
+      "area": "ui",
+      "feature": "learning library command center and Acquire Learn Work information architecture",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/static/os.css",
+        "app/static/home.html",
+        "app/static/index.html",
+        "app/static/learn.html",
+        "app/static/viewer.html",
+        "app/static/lab.html",
+        "app/static/files.html",
+        "app/static/settings.html"
+      ],
+      "tests": [
+        "tests/test_course_intelligence_os_ui.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Course Intelligence OS shell, light/dark themes, Home/Library command center, authorized Acquire flow, Learn workspace, Work/Study Lab, Files and Settings are implemented responsively.",
+      "priority": "P0",
+      "tracking": "ui-course-intelligence-os"
+    },
+    {
+      "reference": "Local-first",
+      "area": "portability",
+      "feature": "versioned backup and import",
+      "status": "MISSING",
+      "implementation": [],
+      "tests": [],
+      "notes": "Add metadata backup/import with schema version checks; exclude large media blobs by default.",
+      "priority": "P2",
+      "tracking": "parity-master"
+    },
+    {
+      "reference": "YouTube-to-MP3 APK (RE-354)",
+      "area": "acquisition",
+      "feature": "single YouTube URL to MP3 and local download inventory",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/jobs.py",
+        "app/main.py",
+        "app/static/index.html",
+        "app/static/app.js"
+      ],
+      "tests": [
+        "tests/test_production_runtime.py",
+        "tests/test_course_intelligence_os_ui.py"
+      ],
+      "notes": "Audio-only MP3 is implemented independently inside the existing authorized Acquire flow. Donor APK source is not public in its repository, so implementation/security parity is not asserted and exact-head CI remains required.",
+      "priority": "P0",
+      "tracking": "issue:21"
+    },
+    {
+      "reference": "YTSage (RE-355)",
+      "area": "media",
+      "feature": "video/audio mode and audio format conversion",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/jobs.py",
+        "app/main.py",
+        "app/static/index.html",
+        "app/static/app.js"
+      ],
+      "tests": [
+        "tests/test_production_runtime.py",
+        "tests/test_course_intelligence_os_ui.py"
+      ],
+      "notes": "Bounded audio extraction formats are implemented in Course Intelligence; YTSage's richer desktop format-table and multi-audio selection UX are not claimed.",
+      "priority": "P0",
+      "tracking": "issue:21"
+    },
+    {
+      "reference": "YTSage (RE-355)",
+      "area": "media",
+      "feature": "SponsorBlock trim speed concurrency containers and audio normalization",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/jobs.py",
+        "app/main.py",
+        "app/static/index.html"
+      ],
+      "tests": [
+        "tests/test_production_runtime.py"
+      ],
+      "notes": "Server-safe argument mappings and validation exist for the Phase A slice. Runtime media fixtures and exact-head CI evidence remain release gates.",
+      "priority": "P0",
+      "tracking": "issue:21"
+    },
+    {
+      "reference": "YTSage (RE-355)",
+      "area": "captions",
+      "feature": "preferred subtitle output format",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/jobs.py",
+        "app/static/index.html"
+      ],
+      "tests": [
+        "tests/test_production_runtime.py",
+        "tests/test_course_intelligence_os_ui.py"
+      ],
+      "notes": "SRT/VTT/ASS/LRC preference is wired to yt-dlp. Subtitle burn-in/merging remains outside this slice.",
+      "priority": "P1",
+      "tracking": "issue:21"
+    },
+    {
+      "reference": "YTSage (RE-355)",
+      "area": "playlist",
+      "feature": "playlist selection and export",
+      "status": "PARTIAL",
+      "implementation": [
+        "app/jobs.py",
+        "app/safety.py",
+        "app/static/index.html"
+      ],
+      "tests": [
+        "tests/test_production_runtime.py",
+        "tests/test_safety.py"
+      ],
+      "notes": "Validated item/range selection is implemented only for explicit YouTube playlist URLs. Rich preview checkbox selection and TXT/CSV/M3U/JSON playlist export remain open.",
+      "priority": "P1",
+      "tracking": "issue:21"
+    },
+    {
+      "reference": "YTSage (RE-355)",
+      "area": "access",
+      "feature": "cookies download history metadata thumbnail and dependency readiness",
+      "status": "FUNCTIONAL_EQUIVALENT",
+      "implementation": [
+        "app/jobs.py",
+        "app/main.py",
+        "app/static/app.js"
+      ],
+      "tests": [
+        "tests/test_production_runtime.py",
+        "tests/e2e/production.spec.mjs"
+      ],
+      "notes": "Course Intelligence already has browser/cookies.txt auth, durable job history, metadata/description/thumbnail capture and FFmpeg/yt-dlp readiness; UI/packaging differs by design.",
+      "priority": "P1",
+      "tracking": "issue:21"
+    },
+    {
+      "reference": "YTSage (RE-355)",
+      "area": "security-boundary",
+      "feature": "generic arbitrary-site mode geo-bypass proxy and arbitrary custom yt-dlp commands",
+      "status": "INTENTIONALLY_EXCLUDED",
+      "implementation": [
+        "app/safety.py"
+      ],
+      "tests": [
+        "tests/test_safety.py"
+      ],
+      "notes": "Course Intelligence keeps an explicit Udemy/YouTube allowlist and authorization-only boundary. Arbitrary-site, geo-restriction-bypass and free-form downloader arguments would weaken SSRF/access-control and command-safety guarantees.",
+      "priority": "P3",
+      "tracking": "issue:21"
+    },
+    {
+      "reference": "YTSage (RE-355)",
+      "area": "distribution",
+      "feature": "localized native desktop installers and in-app component updater",
+      "status": "NOT_APPLICABLE",
+      "implementation": [
+        "Dockerfile",
+        "README.md"
+      ],
+      "tests": [
+        "tests/test_production_runtime.py"
+      ],
+      "notes": "The owned product is a Docker-hosted local-first web application rather than a PySide desktop executable. Native packaging is a separate product-strategy choice, not required for media capability parity.",
+      "priority": "P3",
+      "tracking": "issue:21"
+    }
   ]
 }
