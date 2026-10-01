@@ -43,6 +43,27 @@ class CourseIntelligenceOSUITests(unittest.TestCase):
         self.assertIn("Transcript-only mode", viewer)
         self.assertIn("reports status instead of inventing a writable browser setting", settings)
 
+    def test_acquire_surface_exposes_bounded_media_controls(self):
+        acquire = self.read("index.html")
+        app_js = self.read("app.js")
+        for name in (
+            'name="media_mode"',
+            'name="audio_format"',
+            'name="normalize_audio"',
+            'name="sponsorblock"',
+            'name="trim_start"',
+            'name="trim_end"',
+            'name="speed_limit"',
+            'name="concurrent_fragments"',
+            'name="output_container"',
+            'name="subtitle_format"',
+            'name="playlist_items"',
+        ):
+            self.assertIn(name, acquire)
+        self.assertIn("Generic sites, geo-bypass options, and arbitrary downloader commands remain disabled.", acquire)
+        self.assertIn("syncMediaMode", app_js)
+        self.assertIn('"sponsorblock"', app_js)
+
     def test_learn_surface_contains_complete_grounded_workspace_tabs(self):
         learn = self.read("learn.html")
         for tab in (

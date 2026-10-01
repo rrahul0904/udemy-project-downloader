@@ -11,6 +11,9 @@ const browserRow = document.querySelector("#browser-row");
 const cookiesRow = document.querySelector("#cookies-row");
 const urlInput = form.elements.course_url;
 const practiceTestsInput = form.elements.include_practice_tests;
+const mediaModeInput = form.elements.media_mode;
+const qualityRow = document.querySelector("#quality-row");
+const audioOptions = document.querySelector("#audio-options");
 
 let selectedJobId = null;
 let latestJobs = [];
@@ -24,6 +27,7 @@ for (const input of form.elements.auth_method) {
 }
 
 urlInput.addEventListener("input", syncUrlMode);
+mediaModeInput.addEventListener("change", syncMediaMode);
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -34,7 +38,7 @@ form.addEventListener("submit", async (event) => {
 
   try {
     const data = new FormData(form);
-    for (const name of ["subtitles", "auto_subtitles", "include_practice_tests", "confirm_authorized"]) {
+    for (const name of ["subtitles", "auto_subtitles", "include_practice_tests", "sponsorblock", "confirm_authorized"]) {
       data.set(name, form.elements[name].checked ? "true" : "false");
     }
 
@@ -55,7 +59,14 @@ form.addEventListener("submit", async (event) => {
     form.elements.include_practice_tests.checked = true;
     form.elements.include_practice_tests.disabled = false;
     form.elements.subtitle_languages.value = "en.*";
+    form.elements.concurrent_fragments.value = "4";
+    form.elements.media_mode.value = "video";
+    form.elements.audio_format.value = "mp3";
+    form.elements.normalize_audio.value = "false";
+    form.elements.output_container.value = "mp4";
+    form.elements.subtitle_format.value = "best";
     syncAuthMode();
+    syncMediaMode();
     await refreshAll();
   } catch (error) {
     formMessage.textContent = error.message;
@@ -107,7 +118,8 @@ function renderJobs() {
             ? `browser: ${job.browser}`
             : "cookies.txt";
       const platform = job.platform || "udemy";
-      const content = platform === "udemy" && job.include_practice_tests ? "tests" : "media";
+      const mode = job.media_mode === "audio" ? `audio:${job.audio_format || "best"}` : `video:${job.output_container || "mp4"}`;
+      const content = platform === "udemy" && job.include_practice_tests ? "tests" : mode;
       return `
         <article class="job ${job.id === selectedJobId ? "active" : ""}" data-job="${job.id}">
           <div class="job-top">
@@ -136,6 +148,14 @@ function syncAuthMode() {
   browserRow.hidden = !useBrowser;
   cookiesRow.hidden = !useCookiesFile;
   form.elements.cookies_file.required = useCookiesFile;
+}
+
+function syncMediaMode() {
+  const audio = mediaModeInput.value === "audio";
+  qualityRow.hidden = audio;
+  audioOptions.hidden = !audio;
+  form.elements.output_container.disabled = audio;
+  form.elements.normalize_audio.disabled = !audio;
 }
 
 function syncUrlMode() {
@@ -267,5 +287,6 @@ function detectPlatform(url) {
 
 refreshAll();
 syncAuthMode();
+syncMediaMode();
 syncUrlMode();
 setInterval(refreshAll, 2500);
