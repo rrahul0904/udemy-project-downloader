@@ -1,9 +1,10 @@
 import os
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
-from app.jobs import Job, JobConfig, JobManager
+from app.jobs import Job, JobConfig, JobManager, validate_job_config
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +63,98 @@ class ProductionRuntimeTests(unittest.TestCase):
             self.assertIn("--no-playlist", command)
             self.assertNotIn("--cookies", command)
             self.assertIn("height<=720", joined)
+
+    def test_audio_media_options_map_to_bounded_yt_dlp_arguments(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manager = JobManager(root / "downloads", root / "data", max_concurrent_jobs=1)
+            config = JobConfig(
+                course_url="https://www.youtube.com/playlist?list=PLfixture",
+                platform="youtube",
+                auth_method="none",
+                browser=None,
+                quality="best",
+                subtitles=True,
+                auto_subtitles=True,
+                subtitle_languages="en.*",
+                include_practice_tests=False,
+                media_mode="audio",
+                audio_format="mp3",
+                normalize_audio=True,
+                sponsorblock=True,
+                trim_start="00:00:10",
+                trim_end="00:00:30",
+                speed_limit="2M",
+                concurrent_fragments=8,
+                output_container="mp4",
+                subtitle_format="srt",
+                playlist_items="1,3-5",
+            )
+            job = Job(id="audio-fixture", config=config, output_dir=root / "downloads" / "fixture")
+            command = manager._build_command(job, None)
+
+            self.assertIn("--extract-audio", command)
+            self.assertEqual(command[command.index("--audio-format") + 1], "mp3")
+            self.assertIn("ffmpeg:-af loudnorm=I=-23:LRA=7:TP=-2", command)
+            self.assertEqual(command[command.index("--sponsorblock-remove") + 1], "sponsor")
+            self.assertEqual(command[command.index("--download-sections") + 1], "*00:00:10-00:00:30")
+            self.assertEqual(command[command.index("--limit-rate") + 1], "2M")
+            self.assertEqual(command[command.index("--concurrent-fragments") + 1], "8")
+            self.assertEqual(command[command.index("--sub-format") + 1], "srt")
+            self.assertEqual(command[command.index("--playlist-items") + 1], "1,3-5")
+            self.assertNotIn("--merge-output-format", command)
+            self.assertNotIn("--embed-subs", command)
+
+    def test_media_option_validation_fails_closed(self):
+        base = JobConfig(
+            course_url="https://www.youtube.com/playlist?list=PLfixture",
+            platform="youtube",
+            auth_method="none",
+            browser=None,
+            quality="best",
+            subtitles=False,
+            auto_subtitles=False,
+            subtitle_languages="en.*",
+            include_practice_tests=False,
+        )
+        for bad in (
+            replace(base, media_mode="raw"),
+            replace(base, audio_format="exe"),
+            replace(base, concurrent_fragments=0),
+            replace(base, concurrent_fragments=21),
+            replace(base, speed_limit="2M;rm"),
+            replace(base, trim_start="00:01:00", trim_end="00:00:30"),
+            replace(base, trim_start="00:00:10", trim_end=""),
+            replace(base, playlist_items="../1"),
+            replace(base, normalize_audio=True),
+        ):
+            with self.subTest(config=bad):
+                with self.assertRaises(ValueError):
+                    validate_job_config(bad)
+
+        with self.assertRaises(ValueError):
+            validate_job_config(replace(base, course_url="https://www.youtube.com/watch?v=fixture", playlist_items="1-3"))
+
+    def test_video_output_container_is_configurable(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manager = JobManager(root / "downloads", root / "data", max_concurrent_jobs=1)
+            config = JobConfig(
+                course_url="https://www.youtube.com/watch?v=fixture",
+                platform="youtube",
+                auth_method="none",
+                browser=None,
+                quality="1080",
+                subtitles=False,
+                auto_subtitles=False,
+                subtitle_languages="en.*",
+                include_practice_tests=False,
+                output_container="mkv",
+            )
+            job = Job(id="video-fixture", config=config, output_dir=root / "downloads" / "fixture")
+            command = manager._build_command(job, None)
+            self.assertEqual(command[command.index("--merge-output-format") + 1], "mkv")
+            self.assertIn("height<=1080", " ".join(command))
 
     def test_production_security_contract_is_present(self):
         main = (ROOT / "app/main.py").read_text(encoding="utf-8")
