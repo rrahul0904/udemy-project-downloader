@@ -72,6 +72,19 @@ YouTube channel-wide downloads remain intentionally disabled by the URL guard to
 
 The downloader uses bounded concurrency, durable job history, cancellation, explicit restart semantics, a download archive, bounded log history, optional per-file size limits, disk-space checks and temporary cookie cleanup.
 
+The Acquire surface also supports bounded media-processing options for authorized material:
+
+- video or audio-only acquisition, including MP3/M4A/Opus/FLAC/WAV/AAC/Vorbis extraction;
+- selectable MP4/WebM/MKV merge containers for video jobs;
+- optional EBU R128-style loudness normalization for audio-only jobs;
+- optional SponsorBlock sponsor-segment removal for YouTube;
+- validated start/end section trimming;
+- validated speed limits and 1–20 concurrent fragment selection;
+- preferred subtitle output format (SRT/VTT/ASS/LRC);
+- bounded playlist-item ranges for explicit YouTube playlist URLs.
+
+Generic arbitrary-site mode, geo-restriction bypass options and arbitrary yt-dlp command injection remain intentionally disabled.
+
 ### Source authentication
 
 The downloader supports:
