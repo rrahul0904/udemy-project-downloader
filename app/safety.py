@@ -138,7 +138,14 @@ def _is_specific_public_item(platform: str, host: str, parsed) -> bool:
         if host == "fb.watch" or host.endswith(".fb.watch"):
             return bool(parts)
         lowered = [part.lower() for part in parts]
-        return bool(query.get("v")) or any(token in lowered for token in {"watch", "reel", "reels", "videos"})
+        if query.get("v"):
+            return True
+        if lowered[:1] in (["watch"], ["reel"], ["reels"]):
+            return len(parts) >= 2
+        if "videos" in lowered:
+            index = lowered.index("videos")
+            return index + 1 < len(parts)
+        return False
     if platform == "x":
         lowered = [part.lower() for part in parts]
         return "status" in lowered and lowered.index("status") + 1 < len(parts)
