@@ -33,6 +33,28 @@ test('Course Intelligence OS navigation connects Library Acquire Learn Work File
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 });
 
+test('acquire source preview distinguishes enabled adapters from research-only donor sources', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByLabel('Course or video URL');
+  const validate = page.getByRole('button', { name: 'Validate URL' });
+  const message = page.locator('#form-message');
+
+  await input.fill('https://www.instagram.com/reel/abc/');
+  await validate.click();
+  await expect(message).toContainText('Instagram detected');
+  await expect(message).toContainText('research-only');
+  await expect(message).toContainText('no archive adapter is enabled');
+
+  await input.fill('https://www.youtube.com/watch?v=abc123');
+  await validate.click();
+  await expect(message).toContainText('YouTube detected');
+  await expect(message).toContainText('Archive adapter enabled');
+
+  await input.fill('https://example.com/video/abc');
+  await validate.click();
+  await expect(message).toContainText('Unsupported or unknown media source');
+});
+
 test('course intelligence persists personal notes and bookmarks and keeps grounded artifacts separate', async ({ page }) => {
   await page.goto('/learn');
   const lesson = page.getByRole('button', { name: /Introduction/ }).first();
