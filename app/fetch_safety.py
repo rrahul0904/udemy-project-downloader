@@ -106,7 +106,7 @@ def validate_connected_peer(peer_ip: str, target: ValidatedFetchTarget) -> str:
 
 
 def _resolve_public_addresses(host: str, port: int, resolver: Resolver) -> set[str]:
-    # IP literals bypass DNS but are held to the same global-address policy.
+    # IP literals bypass DNS but are held to the same public-address policy.
     try:
         literal = ipaddress.ip_address(host)
     except ValueError:
@@ -138,7 +138,17 @@ def _resolve_public_addresses(host: str, port: int, resolver: Resolver) -> set[s
 
 
 def _require_global_address(address: ipaddress._BaseAddress) -> None:
-    # ``is_global`` fails closed for loopback, private, link-local, multicast,
-    # unspecified, reserved and documentation-only ranges in Python's stdlib.
-    if not address.is_global:
+    # Do not rely on ``is_global`` alone. Python's ipaddress module can classify
+    # multicast space as global, while a backend fetcher must reject it. Keep the
+    # explicit deny list so loopback, private, link-local, multicast, unspecified
+    # and reserved destinations fail closed across supported Python versions.
+    blocked = (
+        address.is_loopback
+        or address.is_private
+        or address.is_link_local
+        or address.is_multicast
+        or address.is_unspecified
+        or address.is_reserved
+    )
+    if blocked or not address.is_global:
         raise FetchSafetyError("The fetch target resolves to a non-public network address.")
