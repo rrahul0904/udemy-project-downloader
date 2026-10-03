@@ -1,14 +1,14 @@
 # Course Intelligence
 
-A local-first, Docker-hosted learning workspace that combines an authorized Udemy/YouTube media downloader, durable transcript intelligence, and a 21-tool Study Lab.
+A local-first, Docker-hosted learning workspace that combines an authorized multi-source media archive, durable transcript intelligence, and a 21-tool Study Lab.
 
-This project is for content you own, created, or are otherwise authorized to access and archive for personal use. It does **not** bypass DRM, paywalls, account restrictions, or access controls.
+This project is for content you own, created, or are otherwise authorized to access and archive for personal use. It does **not** bypass DRM, paywalls, account restrictions, CAPTCHAs, access controls, or creator/platform watermarks.
 
 ## Product surfaces
 
 | Route | Surface | Purpose |
 | --- | --- | --- |
-| `/` | Downloader | Archive supported authorized Udemy/YouTube media, subtitles, metadata, thumbnails and available Udemy practice tests. |
+| `/` | Acquire | Paste one supported item URL, detect the source, validate whether its adapter is enabled, and run an authorized archive job. |
 | `/learn` | Course Intelligence | Organize archived transcripts into courses/lessons, search them, navigate timestamps, and persist notes/bookmarks. |
 | `/lab` | Study Lab | Use 21 local data, scientific, citation, molecular and study utilities with compatible downloaded files. |
 
@@ -60,31 +60,62 @@ Compatible files under the download store are loaded through the existing guarde
 
 Study Lab is a learning/research helper, not a claim of publication-grade numerical parity. See `docs/STUDY_LAB.md`.
 
-## Downloader
+## Multi-source media archive
 
-Supported URL shapes include:
+The RE-382 release adds a single paste-and-detect workflow inspired by the public UX lessons from AnySaver while preserving this repository's private/authorized-use boundary.
 
-- Udemy course URLs;
-- YouTube video URLs, Shorts and live URLs;
-- explicit YouTube playlist URLs.
+### Archive-enabled sources
 
-YouTube channel-wide downloads remain intentionally disabled by the URL guard to avoid accidental bulk jobs.
+Specific public or normally authorized **item URLs** are enabled for:
 
-The downloader uses bounded concurrency, durable job history, cancellation, explicit restart semantics, a download archive, bounded log history, optional per-file size limits, disk-space checks and temporary cookie cleanup.
+- YouTube videos, Shorts, live URLs and explicit playlists;
+- Instagram posts/reels;
+- TikTok video/photo item URLs;
+- Facebook videos/reels;
+- X/Twitter status posts;
+- Pinterest pins;
+- LinkedIn posts/video/update URLs;
+- Dailymotion videos;
+- Twitch clips/VOD URLs;
+- Bluesky posts;
+- Loom share/embed URLs;
+- Apple Podcasts episode URLs;
+- authenticated Udemy course URLs.
+
+The generic social-media adapters use the pinned `yt-dlp` runtime. Source availability can change upstream, so unsupported or private items fail rather than attempting to bypass platform controls.
+
+### Detected but not archive-enabled
+
+The source registry recognizes these donor-researched sources but deliberately blocks archive jobs until a supported adapter and evidence-backed tests exist:
+
+- Threads;
+- Snapchat;
+- ShareChat;
+- Moj;
+- Giphy;
+- Tenor.
+
+Photo/carousel/GIF capability metadata describes the researched source surface; it is not a claim of complete photo/GIF parity in the current archive engine.
+
+### Bounded item scope
+
+Profile, account, feed and broad collection URLs are rejected for the newly enabled social sources. This keeps jobs item-scoped and avoids accidental bulk downloads. YouTube channel-wide downloads likewise remain intentionally disabled.
+
+The archive engine uses bounded concurrency, durable job history, cancellation, explicit restart semantics, a download archive, bounded log history, optional per-file size limits, disk-space checks and temporary cookie cleanup.
 
 ### Source authentication
 
-The downloader supports:
+The archive flow supports:
 
-- no source cookies for public YouTube;
+- no source cookies for public content where the source works anonymously;
 - local browser cookies when the app is running directly on a compatible local machine;
-- temporary Netscape-format `cookies.txt` upload for an authorized user/session.
+- temporary Netscape-format `cookies.txt` upload for a normally authorized user/session.
 
-Udemy downloads require an authorized browser session or cookies file. Private/restricted YouTube content likewise requires normal account authorization. Uploaded cookie material is temporary and is removed after the job; stale app cookie files are removed at startup.
+Udemy downloads require an authorized browser session or cookies file. Private/restricted media likewise requires normal account authorization when the underlying source supports it. Uploaded cookie material is temporary and is removed after the job; stale app cookie files are removed at startup.
 
 ## Production security boundary
 
-The first production release is deliberately a **private/personal application**, not an anonymous public downloader.
+The production release is deliberately a **private/personal application**, not an anonymous public downloader.
 
 When `APP_ENV=production`:
 
@@ -96,6 +127,8 @@ When `APP_ENV=production`:
 - job creation is rate-limited;
 - upload and query sizes are bounded;
 - absolute storage paths are not exposed by the production download inventory.
+
+RE-382 also adds network-target safety primitives for any future direct fetcher: HTTP(S)-only validation, standard-port enforcement, public-address checks, redirect revalidation, DNS-result receipts and connected-peer binding. The current social archive path remains the bounded `yt-dlp` job engine rather than a new arbitrary URL fetch proxy.
 
 Always terminate TLS/HTTPS in front of the container. Do not use Basic authentication over plaintext HTTP.
 
@@ -110,6 +143,8 @@ The application requires more than a static/serverless web deployment. A complet
 - persistent `/app/data` storage;
 - long-running download jobs;
 - HTTPS and environment-secret management.
+
+A Render Blueprint is included in `render.yaml`. It targets `main`, uses the production Docker image, persistent storage, generated credentials, `/api/health`, and checks-passed deployment semantics.
 
 See `docs/PRODUCTION_DEPLOYMENT.md` for the exact runtime, persistence, backup, rollback and production acceptance requirements.
 
@@ -142,11 +177,15 @@ Docker build:
 VERIFY_DOCKER=1 bash scripts/verify.sh
 ```
 
-CI runs independent verification, Playwright browser smoke and production image build jobs.
+CI runs independent verification, Playwright Chromium smoke, production image build and Render Blueprint contract checks.
+
+The RE-382 release candidate was verified on exact head `b0fef4d1447cb00687b97a5308070fd7c56e55b3` in Actions run `37150834407`, then merged as `2ca535bb3ea9ae1acb114da958940c78d63a4ddf`. The merged `main` commit passed the same four gates in Actions run `37150932817`.
 
 ## Reference notes
 
 The downloader work was informed by public MIT-licensed downloader references, but DRM/Widevine-oriented paths were intentionally excluded.
+
+The RE-382 source/capability work was informed by the public AnySaver product and launch discussion as a UX/capability donor. This repository does not claim knowledge of AnySaver's private implementation and does not copy private source code.
 
 Study Lab's inventory was informed by the MIT-licensed STEMKit project (`LD-Shell/stemkit`) and independently implemented; see `docs/STUDY_LAB.md` for attribution and scope.
 
