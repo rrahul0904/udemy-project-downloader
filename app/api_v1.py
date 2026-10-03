@@ -10,7 +10,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .database import CourseStore
-from .media_sources import ImplementationState, MediaSourceError, SOURCE_REGISTRY, detect_media_source
+from .media_sources import MediaSourceError, SOURCE_REGISTRY, detect_media_source
 from .study_service import StudyService
 from .study_store import ARTIFACT_KINDS, StudyStore
 from .transcript_export import SUPPORTED_EXPORT_FORMATS, export_transcript
@@ -47,7 +47,7 @@ def _source_payload(spec, *, canonical_host: str | None = None) -> dict[str, Any
         },
         "policy_mode": spec.policy_mode.value,
         "implementation_state": spec.implementation_state.value,
-        "archive_enabled": spec.implementation_state is ImplementationState.EXISTING,
+        "archive_enabled": spec.archive_enabled,
     }
 
 
@@ -61,7 +61,7 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
         return {
             "sources": [_source_payload(spec) for spec in SOURCE_REGISTRY.values()],
             "count": len(SOURCE_REGISTRY),
-            "notice": "Detection describes researched source capabilities; archive_enabled is true only for implemented adapters.",
+            "notice": "archive_enabled is true only for repository-specific or current yt-dlp-backed public/authorized adapters; research-only sources remain blocked.",
         }
 
     @router.get("/media-sources/detect")
