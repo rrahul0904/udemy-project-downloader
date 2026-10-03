@@ -12,6 +12,7 @@ class MediaSourceError(ValueError):
 
 class ImplementationState(str, Enum):
     EXISTING = "existing"
+    GENERIC_YTDLP = "generic_yt_dlp"
     RESEARCH_ONLY = "research_only"
 
 
@@ -38,6 +39,13 @@ class SourceSpec:
     policy_mode: PolicyMode
     implementation_state: ImplementationState = ImplementationState.RESEARCH_ONLY
 
+    @property
+    def archive_enabled(self) -> bool:
+        return self.implementation_state in {
+            ImplementationState.EXISTING,
+            ImplementationState.GENERIC_YTDLP,
+        }
+
 
 @dataclass(frozen=True)
 class DetectedSource:
@@ -45,9 +53,11 @@ class DetectedSource:
     canonical_host: str
 
 
-# RE-382 donor-research registry. Capabilities below describe the public AnySaver
-# surface observed on 2026-10-03; they are product-research metadata, not claims
-# that this repository has implemented the corresponding adapters.
+# RE-382 source registry.
+# EXISTING = repository-specific path already present before RE-382.
+# GENERIC_YTDLP = source has a current yt-dlp extractor and is enabled only for
+# public/authorized item URLs through the same bounded job runtime.
+# RESEARCH_ONLY = donor capability is known but no adapter is enabled yet.
 _SOURCE_SPECS = (
     SourceSpec(
         "instagram",
@@ -55,6 +65,7 @@ _SOURCE_SPECS = (
         ("instagram.com",),
         SourceCapabilities(video=True, audio=True, photo=True, carousel=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "tiktok",
@@ -62,6 +73,7 @@ _SOURCE_SPECS = (
         ("tiktok.com",),
         SourceCapabilities(video=True, audio=True, photo=True, carousel=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "youtube",
@@ -77,6 +89,7 @@ _SOURCE_SPECS = (
         ("facebook.com", "fb.watch"),
         SourceCapabilities(video=True, audio=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "x",
@@ -84,6 +97,7 @@ _SOURCE_SPECS = (
         ("x.com", "twitter.com"),
         SourceCapabilities(video=True, audio=True, photo=True, gif=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "pinterest",
@@ -91,6 +105,7 @@ _SOURCE_SPECS = (
         ("pinterest.com", "pin.it"),
         SourceCapabilities(video=True, audio=True, photo=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "threads",
@@ -112,6 +127,7 @@ _SOURCE_SPECS = (
         ("linkedin.com",),
         SourceCapabilities(video=True, audio=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "dailymotion",
@@ -119,6 +135,7 @@ _SOURCE_SPECS = (
         ("dailymotion.com", "dai.ly"),
         SourceCapabilities(video=True, audio=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "twitch",
@@ -126,6 +143,7 @@ _SOURCE_SPECS = (
         ("twitch.tv",),
         SourceCapabilities(video=True, audio=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "bluesky",
@@ -133,6 +151,7 @@ _SOURCE_SPECS = (
         ("bsky.app",),
         SourceCapabilities(video=True, audio=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "sharechat",
@@ -154,6 +173,7 @@ _SOURCE_SPECS = (
         ("loom.com",),
         SourceCapabilities(video=True, audio=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
     SourceSpec(
         "giphy",
@@ -175,9 +195,8 @@ _SOURCE_SPECS = (
         ("podcasts.apple.com",),
         SourceCapabilities(audio=True),
         PolicyMode.PUBLIC_OR_AUTHORIZED,
+        ImplementationState.GENERIC_YTDLP,
     ),
-    # Existing repository capability retained in the future adapter registry even
-    # though it is outside the AnySaver donor matrix.
     SourceSpec(
         "udemy",
         "Udemy",
@@ -192,12 +211,7 @@ SOURCE_REGISTRY = MappingProxyType({spec.key: spec for spec in _SOURCE_SPECS})
 
 
 def detect_media_source(value: str) -> DetectedSource:
-    """Classify a submitted URL without performing any network request.
-
-    This is deliberately hostname-only. Adapter eligibility, rights checks,
-    public/private status, redirects, DNS/IP validation and actual retrieval are
-    separate gates and must not be inferred from this result.
-    """
+    """Classify a submitted URL without performing any network request."""
 
     parsed = urlparse((value or "").strip())
     if parsed.scheme not in {"http", "https"}:
@@ -224,8 +238,6 @@ def detect_media_source(value: str) -> DetectedSource:
 
 
 def _match_host(host: str, allowed_hosts: tuple[str, ...]) -> str | None:
-    # Match an exact base host or a true DNS subdomain. This intentionally rejects
-    # lookalikes such as youtube.com.evil.example and notyoutube.com.
     for allowed in allowed_hosts:
         candidate = allowed.casefold().rstrip(".")
         if host == candidate or host.endswith(f".{candidate}"):
