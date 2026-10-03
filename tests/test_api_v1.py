@@ -84,7 +84,7 @@ class ApiV1Tests(unittest.TestCase):
         }
         self.assertTrue(expected.issubset(routes))
 
-    def test_media_source_preview_distinguishes_research_only_from_enabled_adapters(self):
+    def test_media_source_preview_distinguishes_existing_generic_and_research_only(self):
         router = build_api_v1(self.store, self.downloads)
         detect_route = next(route for route in router.routes if route.path == "/api/v1/media-sources/detect")
         list_route = next(route for route in router.routes if route.path == "/api/v1/media-sources")
@@ -100,9 +100,14 @@ class ApiV1Tests(unittest.TestCase):
 
         instagram = asyncio.run(detect_route.endpoint(url="https://www.instagram.com/reel/abc/"))
         self.assertEqual(instagram["key"], "instagram")
-        self.assertFalse(instagram["archive_enabled"])
-        self.assertEqual(instagram["implementation_state"], "research_only")
+        self.assertTrue(instagram["archive_enabled"])
+        self.assertEqual(instagram["implementation_state"], "generic_yt_dlp")
         self.assertTrue(instagram["capabilities"]["carousel"])
+
+        threads = asyncio.run(detect_route.endpoint(url="https://www.threads.net/@example/post/abc"))
+        self.assertEqual(threads["key"], "threads")
+        self.assertFalse(threads["archive_enabled"])
+        self.assertEqual(threads["implementation_state"], "research_only")
 
         with self.assertRaises(HTTPException) as caught:
             asyncio.run(detect_route.endpoint(url="https://example.com/video/abc"))
