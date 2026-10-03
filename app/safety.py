@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.parse import parse_qs, urlparse, urlunparse
 
+from .media_sources import MediaSourceError, detect_media_source
+
 
 class UrlValidationError(ValueError):
     """Raised when a submitted URL is outside the supported download scope."""
@@ -27,31 +29,36 @@ YOUTUBE_HOSTS = {
 
 def normalize_supported_url(value: str) -> NormalizedUrl:
     url = (value or "").strip()
-    parsed = urlparse(url)
-
-    if parsed.scheme not in {"http", "https"}:
-        raise UrlValidationError("Use a full http or https Udemy or YouTube URL.")
-    if parsed.username is not None or parsed.password is not None:
-        raise UrlValidationError("Embedded URL credentials are not allowed.")
     try:
-        port = parsed.port
-    except ValueError as exc:
-        raise UrlValidationError("The source URL contains an invalid port.") from exc
-    if port not in {None, 80, 443}:
-        raise UrlValidationError("Only standard web ports are allowed for source URLs.")
+        detected = detect_media_source(url)
+    except MediaSourceError as exc:
+        raise UrlValidationError(str(exc)) from exc
 
-    host = (parsed.hostname or "").lower()
-    if _is_udemy_host(host):
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    platform = detected.source.key
+
+    if platform == "udemy":
         if not parsed.path or parsed.path == "/":
             raise UrlValidationError("Paste a specific Udemy course URL.")
-        return NormalizedUrl(_normalize_parsed_url(parsed), "udemy")
+        return NormalizedUrl(_normalize_parsed_url(parsed), platform)
 
-    if host in YOUTUBE_HOSTS:
+    if platform == "youtube":
         if not _is_specific_youtube_url(parsed):
             raise UrlValidationError("Paste a specific YouTube video, Shorts, live, or playlist URL.")
-        return NormalizedUrl(_normalize_parsed_url(parsed), "youtube")
+        return NormalizedUrl(_normalize_parsed_url(parsed), platform)
 
-    raise UrlValidationError("Only Udemy course URLs and YouTube video or playlist URLs are supported.")
+    if not detected.source.archive_enabled:
+        raise UrlValidationError(
+            f"{detected.source.display_name} is recognized but its archive adapter is not enabled yet."
+        )
+
+    if not _is_specific_public_item(platform, host, parsed):
+        raise UrlValidationError(
+            f"Paste a specific {detected.source.display_name} post, clip, video, pin, recording, or episode URL rather than a profile or feed."
+        )
+
+    return NormalizedUrl(_normalize_parsed_url(parsed), platform)
 
 
 def normalize_udemy_url(value: str) -> str:
@@ -84,11 +91,11 @@ def slug_from_url(value: str) -> str:
         index = parts.index("course")
         candidate = parts[index + 1] if len(parts) > index + 1 else "udemy-course"
     else:
-        candidate = parts[-1] if parts else parsed.hostname or "course"
+        candidate = parts[-1] if parts else parsed.hostname or "media"
 
     safe = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in candidate)
     safe = "-".join(part for part in safe.split("-") if part)
-    return safe[:80] or "course"
+    return safe[:80] or "media"
 
 
 def _is_udemy_host(host: str) -> bool:
@@ -96,8 +103,8 @@ def _is_udemy_host(host: str) -> bool:
 
 
 def _normalize_parsed_url(parsed) -> str:
-    host = (parsed.hostname or "").lower()
-    return urlunparse(("https", host, parsed.path, "", parsed.query, ""))
+    host = (parsed.hostname or "").lower().rstrip(".")
+    return urlunparse(("https", host, parsed.path or "/", "", parsed.query, ""))
 
 
 def _is_specific_youtube_url(parsed) -> bool:
@@ -113,5 +120,47 @@ def _is_specific_youtube_url(parsed) -> bool:
         return bool(query.get("list"))
     if parts[:1] in (["shorts"], ["embed"], ["live"]):
         return len(parts) >= 2 and bool(parts[1])
+    return False
 
+
+def _is_specific_public_item(platform: str, host: str, parsed) -> bool:
+    parts = [part for part in parsed.path.split("/") if part]
+    query = parse_qs(parsed.query)
+
+    if platform == "instagram":
+        return len(parts) >= 2 and parts[0].lower() in {"p", "reel", "reels", "tv"}
+    if platform == "tiktok":
+        if host.startswith("vm.") or host.startswith("vt."):
+            return bool(parts)
+        lowered = [part.lower() for part in parts]
+        return "video" in lowered or "photo" in lowered or (len(parts) >= 2 and lowered[0] == "t")
+    if platform == "facebook":
+        if host == "fb.watch" or host.endswith(".fb.watch"):
+            return bool(parts)
+        lowered = [part.lower() for part in parts]
+        return bool(query.get("v")) or any(token in lowered for token in {"watch", "reel", "reels", "videos"})
+    if platform == "x":
+        lowered = [part.lower() for part in parts]
+        return "status" in lowered and lowered.index("status") + 1 < len(parts)
+    if platform == "pinterest":
+        if host == "pin.it" or host.endswith(".pin.it"):
+            return bool(parts)
+        return len(parts) >= 2 and parts[0].lower() == "pin"
+    if platform == "linkedin":
+        path = parsed.path.lower()
+        return path.startswith("/posts/") or path.startswith("/feed/update/") or path.startswith("/video/")
+    if platform == "dailymotion":
+        if host == "dai.ly" or host.endswith(".dai.ly"):
+            return bool(parts)
+        return len(parts) >= 2 and parts[0].lower() in {"video", "embed"}
+    if platform == "twitch":
+        lowered = [part.lower() for part in parts]
+        return host.startswith("clips.") or (parts and lowered[0] == "videos") or "clip" in lowered
+    if platform == "bluesky":
+        lowered = [part.lower() for part in parts]
+        return len(parts) >= 4 and lowered[0] == "profile" and "post" in lowered
+    if platform == "loom":
+        return len(parts) >= 2 and parts[0].lower() in {"share", "embed"}
+    if platform == "apple_podcasts":
+        return bool(parts) and bool(query.get("i"))
     return False
