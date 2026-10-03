@@ -1,7 +1,10 @@
+import asyncio
 import json
 import tempfile
 import unittest
 from pathlib import Path
+
+from fastapi import HTTPException
 
 from app.api_v1 import build_api_v1
 from app.database import CourseStore
@@ -68,6 +71,8 @@ class ApiV1Tests(unittest.TestCase):
         router = build_api_v1(self.store, self.downloads)
         routes = {(route.path, method) for route in router.routes for method in (route.methods or set())}
         expected = {
+            ("/api/v1/media-sources", "GET"),
+            ("/api/v1/media-sources/detect", "GET"),
             ("/api/v1/courses", "GET"),
             ("/api/v1/courses/{course_id}", "GET"),
             ("/api/v1/lessons/{lesson_id}", "GET"),
@@ -78,6 +83,35 @@ class ApiV1Tests(unittest.TestCase):
             ("/api/v1/transcripts/{transcript_id}/export", "GET"),
         }
         self.assertTrue(expected.issubset(routes))
+
+    def test_media_source_preview_distinguishes_existing_generic_and_research_only(self):
+        router = build_api_v1(self.store, self.downloads)
+        detect_route = next(route for route in router.routes if route.path == "/api/v1/media-sources/detect")
+        list_route = next(route for route in router.routes if route.path == "/api/v1/media-sources")
+
+        catalog = asyncio.run(list_route.endpoint())
+        self.assertGreaterEqual(catalog["count"], 19)
+        self.assertIn("archive_enabled", catalog["notice"])
+
+        youtube = asyncio.run(detect_route.endpoint(url="https://www.youtube.com/watch?v=abc123"))
+        self.assertEqual(youtube["key"], "youtube")
+        self.assertTrue(youtube["archive_enabled"])
+        self.assertEqual(youtube["implementation_state"], "existing")
+
+        instagram = asyncio.run(detect_route.endpoint(url="https://www.instagram.com/reel/abc/"))
+        self.assertEqual(instagram["key"], "instagram")
+        self.assertTrue(instagram["archive_enabled"])
+        self.assertEqual(instagram["implementation_state"], "generic_yt_dlp")
+        self.assertTrue(instagram["capabilities"]["carousel"])
+
+        threads = asyncio.run(detect_route.endpoint(url="https://www.threads.net/@example/post/abc"))
+        self.assertEqual(threads["key"], "threads")
+        self.assertFalse(threads["archive_enabled"])
+        self.assertEqual(threads["implementation_state"], "research_only")
+
+        with self.assertRaises(HTTPException) as caught:
+            asyncio.run(detect_route.endpoint(url="https://example.com/video/abc"))
+        self.assertEqual(caught.exception.status_code, 400)
 
     def test_exporter_formats_preserve_timestamps(self):
         transcript = {
