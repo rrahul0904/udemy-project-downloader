@@ -10,8 +10,8 @@ test('Course Intelligence OS navigation connects Library Acquire Learn Work File
 
   await primary.getByRole('link', { name: 'Acquire', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('heading', { name: /Archive course material/i })).toBeVisible();
-  await expect(page.getByText('I am authorized to archive this content for local personal use.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Save authorized media/i })).toBeVisible();
+  await expect(page.getByText(/I own, created, or am otherwise authorized to archive this item/i)).toBeVisible();
 
   primary = page.getByRole('navigation', { name: 'Primary' });
   await primary.getByRole('link', { name: 'Learn', exact: true }).click();
@@ -33,22 +33,27 @@ test('Course Intelligence OS navigation connects Library Acquire Learn Work File
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 });
 
-test('acquire source preview distinguishes enabled adapters from research-only donor sources', async ({ page }) => {
+test('acquire source preview distinguishes enabled generic adapters from research-only donor sources', async ({ page }) => {
   await page.goto('/');
-  const input = page.getByLabel('Course or video URL');
+  const input = page.getByLabel('Media or course URL');
   const validate = page.getByRole('button', { name: 'Validate URL' });
   const message = page.locator('#form-message');
 
   await input.fill('https://www.instagram.com/reel/abc/');
   await validate.click();
   await expect(message).toContainText('Instagram detected');
-  await expect(message).toContainText('research-only');
-  await expect(message).toContainText('no archive adapter is enabled');
+  await expect(message).toContainText('Archive adapter enabled');
 
   await input.fill('https://www.youtube.com/watch?v=abc123');
   await validate.click();
   await expect(message).toContainText('YouTube detected');
   await expect(message).toContainText('Archive adapter enabled');
+
+  await input.fill('https://www.threads.net/@example/post/abc');
+  await validate.click();
+  await expect(message).toContainText('Threads detected');
+  await expect(message).toContainText('research-only');
+  await expect(message).toContainText('no archive adapter is enabled');
 
   await input.fill('https://example.com/video/abc');
   await validate.click();
