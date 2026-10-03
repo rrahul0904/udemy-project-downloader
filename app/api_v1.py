@@ -10,6 +10,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .database import CourseStore
+from .media_sources import ImplementationState, MediaSourceError, SOURCE_REGISTRY, detect_media_source
 from .study_service import StudyService
 from .study_store import ARTIFACT_KINDS, StudyStore
 from .transcript_export import SUPPORTED_EXPORT_FORMATS, export_transcript
@@ -31,10 +32,45 @@ class GroundedChatPayload(BaseModel):
     limit: int = Field(default=8, ge=1, le=20)
 
 
+def _source_payload(spec, *, canonical_host: str | None = None) -> dict[str, Any]:
+    return {
+        "key": spec.key,
+        "display_name": spec.display_name,
+        "canonical_host": canonical_host,
+        "hosts": list(spec.hosts),
+        "capabilities": {
+            "video": spec.capabilities.video,
+            "audio": spec.capabilities.audio,
+            "photo": spec.capabilities.photo,
+            "carousel": spec.capabilities.carousel,
+            "gif": spec.capabilities.gif,
+        },
+        "policy_mode": spec.policy_mode.value,
+        "implementation_state": spec.implementation_state.value,
+        "archive_enabled": spec.implementation_state is ImplementationState.EXISTING,
+    }
+
+
 def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["course-intelligence-v1"])
     study_store = StudyStore(store.path)
     study = StudyService(store, study_store)
+
+    @router.get("/media-sources")
+    async def media_sources() -> dict[str, Any]:
+        return {
+            "sources": [_source_payload(spec) for spec in SOURCE_REGISTRY.values()],
+            "count": len(SOURCE_REGISTRY),
+            "notice": "Detection describes researched source capabilities; archive_enabled is true only for implemented adapters.",
+        }
+
+    @router.get("/media-sources/detect")
+    async def media_source_detect(url: str = Query(min_length=1, max_length=4096)) -> dict[str, Any]:
+        try:
+            detected = detect_media_source(url)
+        except MediaSourceError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _source_payload(detected.source, canonical_host=detected.canonical_host)
 
     @router.get("/courses")
     async def courses() -> dict[str, Any]:
