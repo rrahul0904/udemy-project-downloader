@@ -14,48 +14,59 @@ class MediaSourceTests(unittest.TestCase):
         youtube = detect_media_source("https://www.youtube.com/watch?v=abc123")
         self.assertEqual(youtube.source.key, "youtube")
         self.assertEqual(youtube.source.implementation_state, ImplementationState.EXISTING)
+        self.assertTrue(youtube.source.archive_enabled)
         self.assertEqual(youtube.canonical_host, "youtube.com")
 
         udemy = detect_media_source("https://company.udemy.com/course/python-101/")
         self.assertEqual(udemy.source.key, "udemy")
         self.assertEqual(udemy.source.policy_mode, PolicyMode.AUTHORIZED_SESSION)
         self.assertEqual(udemy.source.implementation_state, ImplementationState.EXISTING)
+        self.assertTrue(udemy.source.archive_enabled)
 
-    def test_detects_anysaver_research_matrix_as_research_only(self):
+    def test_verified_generic_sources_are_enabled(self):
         samples = {
             "instagram": "https://www.instagram.com/reel/abc/",
             "tiktok": "https://vm.tiktok.com/ZMabc/",
             "facebook": "https://www.facebook.com/watch/?v=123",
             "x": "https://x.com/example/status/123",
             "pinterest": "https://pin.it/abc123",
-            "threads": "https://www.threads.net/@example/post/abc",
-            "snapchat": "https://www.snapchat.com/spotlight/abc",
             "linkedin": "https://www.linkedin.com/posts/example_abc",
             "dailymotion": "https://www.dailymotion.com/video/abc",
-            "twitch": "https://www.twitch.tv/example/clip/abc",
+            "twitch": "https://www.twitch.tv/videos/123",
             "bluesky": "https://bsky.app/profile/example/post/abc",
+            "loom": "https://www.loom.com/share/abc",
+            "apple_podcasts": "https://podcasts.apple.com/us/podcast/example/id123?i=456",
+        }
+        for key, url in samples.items():
+            with self.subTest(key=key):
+                detected = detect_media_source(url)
+                self.assertEqual(detected.source.key, key)
+                self.assertEqual(detected.source.implementation_state, ImplementationState.GENERIC_YTDLP)
+                self.assertTrue(detected.source.archive_enabled)
+
+    def test_unverified_donor_sources_remain_research_only(self):
+        samples = {
+            "threads": "https://www.threads.net/@example/post/abc",
+            "snapchat": "https://www.snapchat.com/spotlight/abc",
             "sharechat": "https://sharechat.com/post/abc",
             "moj": "https://mojapp.in/@example/video/abc",
-            "loom": "https://www.loom.com/share/abc",
             "giphy": "https://giphy.com/gifs/abc",
             "tenor": "https://tenor.com/view/abc",
-            "apple_podcasts": "https://podcasts.apple.com/us/podcast/example/id123",
         }
         for key, url in samples.items():
             with self.subTest(key=key):
                 detected = detect_media_source(url)
                 self.assertEqual(detected.source.key, key)
                 self.assertEqual(detected.source.implementation_state, ImplementationState.RESEARCH_ONLY)
+                self.assertFalse(detected.source.archive_enabled)
 
-    def test_registry_is_capability_metadata_not_adapter_claim(self):
+    def test_registry_keeps_capabilities_separate_from_adapter_state(self):
         self.assertTrue(SOURCE_REGISTRY["instagram"].capabilities.carousel)
         self.assertTrue(SOURCE_REGISTRY["giphy"].capabilities.gif)
         self.assertTrue(SOURCE_REGISTRY["apple_podcasts"].capabilities.audio)
         self.assertFalse(SOURCE_REGISTRY["apple_podcasts"].capabilities.video)
-        self.assertEqual(
-            SOURCE_REGISTRY["instagram"].implementation_state,
-            ImplementationState.RESEARCH_ONLY,
-        )
+        self.assertTrue(SOURCE_REGISTRY["instagram"].archive_enabled)
+        self.assertFalse(SOURCE_REGISTRY["giphy"].archive_enabled)
 
     def test_accepts_true_subdomains_and_known_aliases(self):
         self.assertEqual(
