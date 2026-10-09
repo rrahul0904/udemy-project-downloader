@@ -59,6 +59,21 @@ Secondary capability destinations, not owners of this donor:
 - Open Music Studio: stems/music processing.
 - Faceless Content Creator: downstream caption/short rendering consumer.
 
+## Competitive / alternative audit
+
+The acquisition shell itself is not a unique moat. Current public alternatives include native SwiftUI/macOS yt-dlp front ends, long-running MacYTDL, and cross-platform wrappers such as Tauri/Electron/Python GUIs. Commercial Mac products such as Downie also compete on a polished paste-and-download workflow.
+
+The useful differentiation for our roadmap is therefore **not** "another yt-dlp GUI". It is the combination of:
+- one normalized acquisition contract across our already-owned source adapters;
+- a local/user-supplied `MediaAsset` identity;
+- restartable processing jobs with deterministic provenance receipts;
+- transcript/search/course intelligence already present in our platform;
+- a capability registry that makes hardware/dependency/policy limits truthful;
+- a durable media library and derived-asset lineage;
+- optional downstream AI/media transforms that can be independently certified.
+
+This avoids competing on visual wrapper parity and instead turns acquisition into one entry point for a broader evidence-backed media workbench.
+
 ## Public capability reconstruction
 
 ### Acquisition
