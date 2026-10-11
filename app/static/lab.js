@@ -1,3 +1,9 @@
+import * as StemXvg from './vendor/stemkit-core/xvg-parser.js';
+import * as StemStructure from './vendor/stemkit-core/structure.js';
+import * as StemUnits from './vendor/stemkit-core/units.js';
+import * as StemLatex from './vendor/stemkit-core/latex.js';
+import * as StemDigitizer from './vendor/stemkit-core/digitizer.js';
+
 const panel = document.querySelector('#tool-panel');
 const titleEl = document.querySelector('#workspace-title');
 const descriptionEl = document.querySelector('#workspace-description');
@@ -457,28 +463,51 @@ function runPlot() {
   panel.querySelector('#plot-output').innerHTML=svgPlot(data,{line:panel.querySelector('#plot-type').value==='line'});
 }
 function runXvg() {
-  const raw=panel.querySelector('#input-data').value;
-  const data=String(raw).split(/\r?\n/).filter(line=>line.trim()&&!line.trim().startsWith('#')&&!line.trim().startsWith('@')).map(line=>line.trim().split(/\s+/).map(Number)).filter(v=>v.length>=2&&Number.isFinite(v[0])&&Number.isFinite(v[1])).map(v=>[v[0],v[1]]);
-  if(data.length<1) throw new Error('No numeric XVG rows found.');
-  const ys=data.map(d=>d[1]); const s=summary(ys); resultText(`Rows: ${data.length}\nX range: ${fmt(data[0][0])} → ${fmt(data[data.length-1][0])}\nY mean: ${fmt(s.mean)}\nY min/max: ${fmt(s.min)} / ${fmt(s.max)}`);
-  const plot=panel.querySelector('#plot-output'); plot.hidden=false; plot.innerHTML=svgPlot(data,{line:true,xLabel:'XVG x',yLabel:'series 1'});
+  const raw = panel.querySelector('#input-data').value;
+  const parsed = StemXvg.parseXvg(raw);
+  if (!parsed.matrix?.length || parsed.matrix[0].length < 2) throw new Error('No numeric XVG series found.');
+  const data = StemXvg.extractSeries(parsed.matrix, 0, 1);
+  const ys = StemXvg.extractColumn(parsed.matrix, 1);
+  const s = StemXvg.columnStats(ys);
+  const headers = parsed.headers || [];
+  resultText([
+    parsed.title ? `Title: ${parsed.title}` : null,
+    `Rows: ${parsed.rowCount ?? data.length}`,
+    `Series: ${headers[1] || 'column 2'}`,
+    `Mean: ${fmt(s.mean)}`,
+    `Sample SD: ${fmt(s.std)}`,
+    `Min / max: ${fmt(s.min)} / ${fmt(s.max)}`
+  ].filter(Boolean).join('\n'));
+  const plot = panel.querySelector('#plot-output');
+  plot.hidden = false;
+  plot.innerHTML = svgPlot(data, {line:true, xLabel:headers[0] || 'X', yLabel:headers[1] || 'series 1'});
 }
 function runStructure() {
-  const atoms=pdbAtoms(panel.querySelector('#input-data').value); if(!atoms.length) throw new Error('No valid PDB ATOM/HETATM coordinates found.');
-  const chains=[...new Set(atoms.map(a=>a.chain))]; const residues=[...new Set(atoms.map(a=>`${a.chain}:${a.resSeq}:${a.residue}`))]; const elements=[...new Set(atoms.map(a=>a.element).filter(Boolean))];
-  const xs=atoms.map(a=>a.x), ys=atoms.map(a=>a.y), zs=atoms.map(a=>a.z);
-  resultText(`Atoms: ${atoms.length}\nResidues: ${residues.length}\nChains: ${chains.join(', ')}\nElements: ${elements.join(', ')}\nX: ${fmt(Math.min(...xs))} → ${fmt(Math.max(...xs))}\nY: ${fmt(Math.min(...ys))} → ${fmt(Math.max(...ys))}\nZ: ${fmt(Math.min(...zs))} → ${fmt(Math.max(...zs))}`);
+  const parsed = StemStructure.parsePDB(panel.querySelector('#input-data').value);
+  if (!parsed.atoms.length) throw new Error('No valid PDB ATOM/HETATM coordinates found.');
+  const s = StemStructure.structureStats(parsed.atoms);
+  const elementText = Object.entries(s.elements || {}).map(([key, value]) => `${key}:${value}`).join(', ');
+  resultText([
+    `Atoms: ${s.nAtoms}`,
+    `Residues: ${s.nResidues}`,
+    `Chains: ${s.nChains}`,
+    `Molecular mass: ${fmt(s.totalMass)} Da`,
+    `Radius of gyration: ${fmt(s.radiusOfGyration)} Å`,
+    `Geometric centre: ${['x','y','z'].map(k => fmt(s.geometricCentre?.[k])).join(', ')}`,
+    `Centre of mass: ${['x','y','z'].map(k => fmt(s.centreOfMass?.[k])).join(', ')}`,
+    `Elements: ${elementText || 'n/a'}`,
+    parsed.unknownElements?.length ? `Unknown elements: ${parsed.unknownElements.join(', ')}` : null
+  ].filter(Boolean).join('\n'));
 }
 function runCoordinates() {
-  const dx=Number(panel.querySelector('#dx').value)||0, dy=Number(panel.querySelector('#dy').value)||0, dz=Number(panel.querySelector('#dz').value)||0;
-  let changed=0;
-  const translated=panel.querySelector('#input-data').value.split(/\r?\n/).map(line=>{
-    if(!(line.startsWith('ATOM  ')||line.startsWith('HETATM'))) return line;
-    const x=Number(line.slice(30,38)), y=Number(line.slice(38,46)), z=Number(line.slice(46,54)); if(![x,y,z].every(Number.isFinite)) return line;
-    changed++; const coord=`${(x+dx).toFixed(3).padStart(8)}${(y+dy).toFixed(3).padStart(8)}${(z+dz).toFixed(3).padStart(8)}`;
-    return line.slice(0,30)+coord+line.slice(54);
-  }).join('\n');
-  resultText(`# translated atoms: ${changed}\n${translated}`);
+  const dx = Number(panel.querySelector('#dx').value) || 0;
+  const dy = Number(panel.querySelector('#dy').value) || 0;
+  const dz = Number(panel.querySelector('#dz').value) || 0;
+  const parsed = StemStructure.parsePDB(panel.querySelector('#input-data').value);
+  if (!parsed.atoms.length) throw new Error('No valid PDB ATOM/HETATM coordinates found.');
+  const translated = StemStructure.translateAtoms(parsed.atoms, dx, dy, dz);
+  const output = StemStructure.formatPDB(translated, {box: parsed.box, boxVectors: parsed.boxVectors});
+  resultText(`# translated atoms: ${translated.length}\n${output}`);
 }
 function runWorkflow() {
   const engine=panel.querySelector('#engine').value, name=panel.querySelector('#project-name').value.trim()||'md-project';
@@ -521,10 +550,14 @@ function runJournal() {
 }
 function latexEscape(value) { return String(value).replace(/([&_#$%])/g,'\\$1'); }
 function runLatexTable() {
-  const parsed=rows(panel.querySelector('#input-data').value).filter(row=>row.some(cell=>cell.trim())); if(!parsed.length) throw new Error('Provide at least one table row.');
-  const columns=Math.max(...parsed.map(r=>r.length)); const spec='l'+'r'.repeat(Math.max(0,columns-1));
-  const body=parsed.map((row,index)=>`${row.map(cell=>latexEscape(cell.trim())).join(' & ')} \\\\${index===0?'\n\\hline':''}`).join('\n');
-  resultText(`\\begin{tabular}{${spec}}\n\\hline\n${body}\n\\hline\n\\end{tabular}`);
+  const matrix = StemLatex.parseTableData(panel.querySelector('#input-data').value);
+  if (!matrix.length) throw new Error('Provide at least one table row.');
+  resultText(StemLatex.generateLatexTable(matrix, {
+    environment: 'table',
+    style: 'booktabs',
+    align: 'l',
+    headerRow: true
+  }));
 }
 function runEquation() {
   const eq=panel.querySelector('#equation-value').value.trim(); if(!eq) throw new Error('Enter a LaTeX expression.');
@@ -538,23 +571,46 @@ const units = {
   temperature: {C:null, K:null, F:null},
 };
 function setupUnitSelects() {
-  const category=panel.querySelector('#unit-category');
-  const update=()=>{
-    const names=Object.keys(units[category.value]); const from=panel.querySelector('#unit-from'), to=panel.querySelector('#unit-to');
-    from.innerHTML=names.map(n=>`<option value="${n}">${n}</option>`).join(''); to.innerHTML=names.map(n=>`<option value="${n}">${n}</option>`).join('');
-    if(names.length>1) to.selectedIndex=1;
+  const category = panel.querySelector('#unit-category');
+  const previous = category.value;
+  category.innerHTML = StemUnits.listAllCategories().map(key => {
+    const meta = StemUnits.UNIT_DB[key];
+    return `<option value="${escapeAttr(key)}">${escapeHtml(meta?.title || key)}</option>`;
+  }).join('');
+  if (StemUnits.UNIT_DB[previous]) category.value = previous;
+
+  const update = () => {
+    const names = StemUnits.listUnits(category.value);
+    const from = panel.querySelector('#unit-from');
+    const to = panel.querySelector('#unit-to');
+    const options = names.map(key => {
+      const meta = StemUnits.getUnit(category.value, key);
+      const label = meta ? `${meta.name} (${meta.symbol})` : key;
+      return `<option value="${escapeAttr(key)}">${escapeHtml(label)}</option>`;
+    }).join('');
+    from.innerHTML = options;
+    to.innerHTML = options;
+    if (names.length > 1) to.selectedIndex = 1;
   };
-  category.addEventListener('change',update); update(); restoreToolState('units');
+  category.addEventListener('change', update);
+  update();
+  restoreToolState('units');
 }
 function convertTemperature(value, from, to) {
   let k=from==='K'?value:from==='C'?value+273.15:(value-32)*5/9+273.15;
   return to==='K'?k:to==='C'?k-273.15:(k-273.15)*9/5+32;
 }
 function runUnits() {
-  const category=panel.querySelector('#unit-category').value, value=Number(panel.querySelector('#unit-value').value); if(!Number.isFinite(value)) throw new Error('Enter a numeric value.');
-  const from=panel.querySelector('#unit-from').value, to=panel.querySelector('#unit-to').value;
-  const result=category==='temperature'?convertTemperature(value,from,to):value*units[category][from]/units[category][to];
-  resultText(`${fmt(value)} ${from} = ${fmt(result,10)} ${to}`);
+  const category = panel.querySelector('#unit-category').value;
+  const value = Number(panel.querySelector('#unit-value').value);
+  if (!Number.isFinite(value)) throw new Error('Enter a numeric value.');
+  const from = panel.querySelector('#unit-from').value;
+  const to = panel.querySelector('#unit-to').value;
+  const result = StemUnits.convert(value, category, from, to);
+  if (!Number.isFinite(result)) throw new Error('That unit conversion is not valid.');
+  const fromMeta = StemUnits.getUnit(category, from);
+  const toMeta = StemUnits.getUnit(category, to);
+  resultText(`${StemUnits.formatValue(value)} ${fromMeta?.symbol || from} = ${StemUnits.formatValue(result, 10)} ${toMeta?.symbol || to}`);
 }
 function runDecision() {
   const parsed=String(panel.querySelector('#input-data').value).split(/\r?\n/).map(line=>line.split(',').map(v=>v.trim())).filter(row=>row.length>=2&&row[0]);
@@ -570,20 +626,58 @@ function runKinetics() {
 }
 
 function setupDigitizer() {
-  const file=panel.querySelector('#digitizer-file'), canvas=panel.querySelector('#digitizer-canvas');
-  file.addEventListener('change',()=>{
-    const selected=file.files?.[0]; if(!selected) return;
-    const reader=new FileReader(); reader.onload=()=>{const img=new Image(); img.onload=()=>{digitizerImage=img; digitizerPoints=[]; drawDigitizer();}; img.src=reader.result;}; reader.readAsDataURL(selected);
+  const file = panel.querySelector('#digitizer-file');
+  const canvas = panel.querySelector('#digitizer-canvas');
+  file.addEventListener('change', () => {
+    const selected = file.files?.[0];
+    if (!selected) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        digitizerImage = img;
+        digitizerPoints = [];
+        drawDigitizer();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(selected);
   });
-  canvas.addEventListener('click',(event)=>{
-    if(!digitizerImage) return;
-    const rect=canvas.getBoundingClientRect(); const px=(event.clientX-rect.left)*canvas.width/rect.width, py=(event.clientY-rect.top)*canvas.height/rect.height;
-    const xmin=Number(panel.querySelector('#xmin').value), xmax=Number(panel.querySelector('#xmax').value), ymin=Number(panel.querySelector('#ymin').value), ymax=Number(panel.querySelector('#ymax').value);
-    if(![xmin,xmax,ymin,ymax].every(Number.isFinite)||xmin===xmax||ymin===ymax) return;
-    digitizerPoints.push({px,py,x:xmin+(px/canvas.width)*(xmax-xmin),y:ymax-(py/canvas.height)*(ymax-ymin)}); drawDigitizer();
+
+  canvas.addEventListener('click', (event) => {
+    if (!digitizerImage) return;
+    const rect = canvas.getBoundingClientRect();
+    const px = (event.clientX - rect.left) * canvas.width / rect.width;
+    const py = (event.clientY - rect.top) * canvas.height / rect.height;
+    const xmin = Number(panel.querySelector('#xmin').value);
+    const xmax = Number(panel.querySelector('#xmax').value);
+    const ymin = Number(panel.querySelector('#ymin').value);
+    const ymax = Number(panel.querySelector('#ymax').value);
+    const calibration = {
+      pxX1: 0, pxX2: canvas.width,
+      pxY1: 0, pxY2: canvas.height,
+      valX1: xmin, valX2: xmax,
+      valY1: ymax, valY2: ymin,
+      logX: false, logY: false
+    };
+    const check = StemDigitizer.validateCalibration(calibration);
+    if (!check.valid) {
+      resultText(`Calibration error: ${check.errors.join(' ')}`);
+      return;
+    }
+    const point = StemDigitizer.toDataCoordinates(px, py, calibration);
+    if (!point) return;
+    digitizerPoints.push({px, py, x: point.x, y: point.y});
+    drawDigitizer();
   });
-  panel.querySelector('#clear-digitizer').addEventListener('click',()=>{digitizerPoints=[]; drawDigitizer();});
-  panel.querySelector('#copy-digitizer').addEventListener('click',()=>copyText(['x,y',...digitizerPoints.map(p=>`${p.x},${p.y}`)].join('\n')));
+
+  panel.querySelector('#clear-digitizer').addEventListener('click', () => {
+    digitizerPoints = [];
+    drawDigitizer();
+  });
+  panel.querySelector('#copy-digitizer').addEventListener('click', () => {
+    copyText(['x,y', ...digitizerPoints.map(p => `${StemDigitizer.formatValue(p.x)},${StemDigitizer.formatValue(p.y)}`)].join('\n'));
+  });
   drawDigitizer();
 }
 function drawDigitizer() {

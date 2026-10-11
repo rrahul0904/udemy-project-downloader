@@ -11,6 +11,12 @@ class StudyLabIntegrationTests(unittest.TestCase):
             "app/static/lab.html",
             "app/static/lab.css",
             "app/static/lab.js",
+            "app/static/lab-ui.js",
+            "app/static/study-lab-adapters/digitizer.js",
+            "app/static/study-lab-adapters/slurm.js",
+            "app/static/study-lab-adapters/plumed.js",
+            "app/static/study-lab-adapters/structure.js",
+            "app/static/study-lab-adapters/journal.js",
         ):
             self.assertTrue((ROOT / relative).is_file(), relative)
 
@@ -42,6 +48,51 @@ class StudyLabIntegrationTests(unittest.TestCase):
             "Pomodoro Timer",
         ):
             self.assertIn(label, html)
+
+    def test_slurm_adapter_is_wired_to_vendored_core(self):
+        ui = (ROOT / "app/static/lab-ui.js").read_text(encoding="utf-8")
+        adapter = (ROOT / "app/static/study-lab-adapters/slurm.js").read_text(encoding="utf-8")
+        self.assertIn("enhanceSlurmPanel", ui)
+        self.assertIn("vendor/stemkit-core/slurm.js", adapter)
+        self.assertIn("StemSlurm.generateScript", adapter)
+        self.assertIn("StemSlurm.estimateCoreHours", adapter)
+        self.assertIn("STEMKit SLURM core", adapter)
+
+    def test_plumed_adapter_is_wired_to_vendored_core(self):
+        ui = (ROOT / "app/static/lab-ui.js").read_text(encoding="utf-8")
+        adapter = (ROOT / "app/static/study-lab-adapters/plumed.js").read_text(encoding="utf-8")
+        self.assertIn("enhancePlumedPanel", ui)
+        self.assertIn("vendor/stemkit-core/plumed.js", adapter)
+        self.assertIn("StemPlumed.generatePlumedInput", adapter)
+        self.assertIn("StemPlumed.buildSwitchBlock", adapter)
+        self.assertIn("PLUMED_CATALOGUE", adapter)
+        self.assertIn("DIHEDRAL_CORRELATION", adapter)
+        self.assertIn("fallback: 'DIHCOR'", adapter)
+        self.assertIn("wt_metad", adapter)
+        self.assertIn("opes", adapter)
+
+    def test_structure_adapter_uses_structure_and_selection_cores(self):
+        ui = (ROOT / "app/static/lab-ui.js").read_text(encoding="utf-8")
+        adapter = (ROOT / "app/static/study-lab-adapters/structure.js").read_text(encoding="utf-8")
+        self.assertIn("enhanceStructurePanel", ui)
+        self.assertIn("vendor/stemkit-core/structure.js", adapter)
+        self.assertIn("vendor/stemkit-core/selection.js", adapter)
+        self.assertIn("StemStructure.parseStructure", adapter)
+        self.assertIn("StemStructure.formatStructure", adapter)
+        self.assertIn("StemStructure.rotateAtoms", adapter)
+        self.assertIn("StemSelection.selectAtoms", adapter)
+        self.assertIn("within:", adapter)
+
+    def test_journal_adapter_uses_journal_and_iso4_cores_without_bundled_ltwa(self):
+        ui = (ROOT / "app/static/lab-ui.js").read_text(encoding="utf-8")
+        adapter = (ROOT / "app/static/study-lab-adapters/journal.js").read_text(encoding="utf-8")
+        self.assertIn("enhanceJournalPanel", ui)
+        self.assertIn("vendor/stemkit-core/journals.js", adapter)
+        self.assertIn("vendor/stemkit-core/iso4.js", adapter)
+        self.assertIn("StemJournals.buildEngine", adapter)
+        self.assertIn("StemIso4.loadIso4", adapter)
+        self.assertIn("separate from STEMKit’s MIT license", adapter)
+        self.assertFalse((ROOT / "app/static/vendor/stemkit-core/abbreviation.csv").exists())
 
     def test_study_lab_documentation_records_parity_scope(self):
         docs = (ROOT / "docs/STUDY_LAB.md").read_text(encoding="utf-8")
