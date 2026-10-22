@@ -57,7 +57,7 @@ class MacPracticeExportTests(unittest.TestCase):
             browser.assert_called_once_with("chrome")
             exporter.assert_called_once()
             args, kwargs = exporter.call_args
-            self.assertEqual(args[0], URL)
+            self.assertEqual(args[0], URL.split("#", 1)[0])
             self.assertIsNone(args[1])
             self.assertIn("_practice-tests", str(args[2]))
             self.assertIsNotNone(kwargs["session"])
