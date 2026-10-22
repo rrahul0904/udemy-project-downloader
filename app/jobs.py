@@ -33,6 +33,7 @@ class JobConfig:
     auto_subtitles: bool
     subtitle_languages: str
     include_practice_tests: bool
+    download_videos: bool = True
 
 
 @dataclass
@@ -69,6 +70,7 @@ class Job:
             "browser": self.config.browser,
             "quality": self.config.quality,
             "include_practice_tests": self.config.include_practice_tests,
+            "download_videos": self.config.download_videos,
             "output_dir": str(self.output_dir),
             "logs": self.logs,
         }
@@ -211,41 +213,46 @@ class JobManager:
 
     async def _run_job(self, job: Job, cookies_path: Path | None) -> None:
         job.status = "running"
-        self._log(job, "Starting yt-dlp.")
-
         try:
             if cookies_path is None and job.config.auth_method == "browser":
                 cookies_path = await self._extract_browser_cookies(job)
 
-            command = self._build_command(job, cookies_path)
-            self._log(job, "Downloader command prepared.")
-            job.process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                cwd=str(job.output_dir),
-            )
-            assert job.process.stdout is not None
-            log_lines = 0
-            while True:
-                line = await job.process.stdout.readline()
-                if not line:
-                    break
-                self._log(job, line.decode("utf-8", errors="replace").strip(), persist=False)
-                log_lines += 1
-                if log_lines % LOG_PERSIST_INTERVAL == 0:
-                    self._persist()
+            if job.config.download_videos:
+                self._log(job, "Starting yt-dlp.")
+                command = self._build_command(job, cookies_path)
+                self._log(job, "Downloader command prepared.")
+                job.process = await asyncio.create_subprocess_exec(
+                    *command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                )
+                log_lines = 0
+                while True:
+                    line = await job.process.stdout.readline()
+                    if not line:
+                        break
+                    self._log(job, line.decode("utf-8", errors="replace").strip(), persist=False)
+                    log_lines += 1
+                    if log_lines % LOG_PERSIST_INTERVAL == 0:
+                        self._persist()
+                job.return_code = await job.process.wait()
+                self._log(job, f"yt-dlp finished with exit code {job.return_code}.")
+                if job.status == "cancelled":
+                    return
+            else:
+                job.return_code = 0
+                self._log(job, "Practice-only job: video download skipped.")
 
-            job.return_code = await job.process.wait()
-            self._log(job, f"yt-dlp finished with exit code {job.return_code}.")
-
-            if job.status == "cancelled":
-                return
-
+            export_ok = True
             if job.config.include_practice_tests and job.config.platform == "udemy":
-                await self._export_practice_tests(job, cookies_path)
+                export_ok = await self._export_practice_tests(job, cookies_path)
 
-            job.status = "succeeded" if job.return_code == 0 else "failed"
+            videos_ok = not job.config.download_videos or job.return_code == 0
+            job.status = "succeeded" if videos_ok and export_ok else "failed"
+            if not videos_ok:
+                self._log(job, "Video download failed; check the yt-dlp output.")
+            if not export_ok:
+                self._log(job, "Practice export failed or no questions were retrieved.")
             self._persist()
         except FileNotFoundError:
             job.status = "failed"
@@ -323,20 +330,20 @@ class JobManager:
             return urlunparse((parsed.scheme, parsed.netloc, f"/{parts[1]}/", "", parsed.query, ""))
         return config.course_url
 
-    async def _export_practice_tests(self, job: Job, cookies_path: Path | None) -> None:
+    async def _export_practice_tests(self, job: Job, cookies_path: Path | None) -> bool:
         if not cookies_path:
             self._log(job, "Practice test export skipped: Udemy authentication cookies are required.")
-            return
+            return False
         self._log(job, "Exporting practice tests and quizzes.")
         practice_dir = job.output_dir / "_practice-tests"
         try:
             result = await asyncio.to_thread(export_practice_tests, job.config.course_url, cookies_path, practice_dir)
         except PracticeExportError as exc:
             self._log(job, f"Practice test export skipped: {exc}")
-            return
+            return False
         except Exception as exc:
             self._log(job, f"Practice test export failed: {type(exc).__name__}: {exc}")
-            return
+            return False
         self._log(job, f"Practice test export complete: {result.item_count} item(s), {result.assessment_count} question(s).")
         self._log(job, f"Practice test files written to {practice_dir}.")
         self._log(job, f"Practice test PDF ready: {result.output_pdf.name}.")
@@ -344,6 +351,10 @@ class JobManager:
             self._log(job, f"Practice set PDFs ready: {len(result.output_set_pdfs)} file(s).")
         if result.warnings:
             self._log(job, f"Practice export warnings: {len(result.warnings)}. See {result.output_html.name}.")
+        if result.assessment_count == 0:
+            self._log(job, "No practice questions retrieved; this job is not verified as a successful exam export.")
+            return False
+        return True
 
     @staticmethod
     def _format_selector(quality: str) -> str | None:
