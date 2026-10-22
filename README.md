@@ -173,6 +173,9 @@ UI's Files inventory updates when the export completes. Stop the companion with
 Ctrl-C when finished. A remote deployment cannot access a local Chrome/Safari
 profile and cannot use this companion.
 
+For the separate, resumable 69-course Claude certification workflow, see
+[`docs/claude-certifications/README.md`](docs/claude-certifications/README.md).
+
 ## Production security boundary
 
 The production release is deliberately a **private/personal application**, not an anonymous public downloader.

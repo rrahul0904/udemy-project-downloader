@@ -1129,6 +1129,24 @@ def _assessment_explanation(assessment: dict[str, Any]) -> str:
             text = _plain(source.get(key))
             if text:
                 return _clean_text(text)
+    # Udemy also returns per-option feedback in a plural array. Only use the
+    # feedback at an explicitly returned correct answer index; choosing another
+    # option's feedback would misstate the source explanation.
+    feedbacks = prompt.get("feedbacks")
+    correct = assessment.get("correct_response") or assessment.get("correct_responses")
+    if isinstance(feedbacks, list) and correct:
+        values = correct if isinstance(correct, list) else [correct]
+        explanations: list[str] = []
+        for value in values:
+            if not isinstance(value, str) or len(value) != 1 or not value.isascii() or not value.isalpha():
+                continue
+            index = ord(value.casefold()) - ord("a")
+            if 0 <= index < len(feedbacks):
+                text = _clean_text(_plain(feedbacks[index]))
+                if text and text not in explanations:
+                    explanations.append(text)
+        if explanations:
+            return "; ".join(explanations)
     return ""
 
 
