@@ -43,7 +43,7 @@ class ClaudeCertificationBatchTests(unittest.TestCase):
 
     def test_zero_question_diagnostic_never_becomes_complete(self):
         course = load_manifest(MANIFEST)[1][0]
-        with tempfile.TemporaryDirectory(dir=ROOT / "downloads") as temp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as temp:
             directory = Path(temp)
             path = directory / "synthetic-practice-tests.json"
             payload = {
@@ -63,7 +63,7 @@ class ClaudeCertificationBatchTests(unittest.TestCase):
 
     def test_cross_quiz_duplicates_keep_both_source_instances(self):
         course = load_manifest(MANIFEST)[1][0]
-        with tempfile.TemporaryDirectory(dir=ROOT / "downloads") as temp:
+        with tempfile.TemporaryDirectory(dir=ROOT) as temp:
             directory = Path(temp)
             path = directory / "synthetic-practice-tests.json"
             assessment = {"id": 91, "prompt": {"question": "Synthetic stem", "answers": ["A", "B"]},
