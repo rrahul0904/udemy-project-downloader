@@ -12,6 +12,8 @@
 .acquire-config fieldset { margin:0;padding:12px;border:1px solid var(--border-subtle);border-radius:12px; }
 .acquire-config .auth-box label,.acquire-config .checks label,.acquire-config .confirm { display:flex;align-items:flex-start;gap:9px;margin:7px 0;color:var(--text-secondary);font-size:13px; }
 .acquire-config .auth-box label span,.acquire-config .checks label span,.acquire-config .confirm span { margin:0; }
+.acquire-config #browser-row[hidden],.acquire-config #cookies-row[hidden] { display:none; }
+.acquire-config #job-mode { margin:0;color:var(--text-secondary);font-size:12px; }
 .acquire-config .row { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
 .acquire-actions { display:grid;grid-template-columns:1fr auto;gap:8px; }
 .acquire-actions .primary { min-height:46px;border:0;border-radius:12px;background:var(--course-blue);color:white;font-weight:800;cursor:pointer; }
@@ -28,6 +30,10 @@
 .acquire-console .log-panel { min-width:0;background:color-mix(in srgb,var(--surface-soft) 72%, var(--background)); }
 .acquire-console .log-head { display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border-subtle); }
 .acquire-console .log-head h2 { margin:0;font-size:15px; }
+.acquire-console .job-details { padding:12px 14px;border-bottom:1px solid var(--border-subtle);color:var(--text-secondary);font-size:12px;line-height:1.6;white-space:pre-line; }
+.acquire-console .job-details:empty { display:none; }
+.acquire-console .status.partial,.acquire-console .status.no_practice_tests { background:#fff0c2;color:var(--amber); }
+.acquire-console .status.not_accessible { background:#f9dddd;color:var(--red); }
 .acquire-console .logs { min-height:410px;max-height:540px;margin:0;padding:14px;overflow:auto;background:transparent;color:var(--text-secondary);font-family:var(--mono);font-size:12px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere; }
 .acquire-files { grid-column:1 / -1;margin-top:18px; }
 .acquire-files .downloads-head { display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border-subtle); }

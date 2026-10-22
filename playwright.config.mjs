@@ -11,7 +11,7 @@ export default defineConfig({
   webServer: {
     command: "rm -rf .tmp-e2e && mkdir -p .tmp-e2e/downloads/TestCourse .tmp-e2e/data && cp -R tests/fixtures/test-course/. .tmp-e2e/downloads/TestCourse/ && DATA_DIR=$PWD/.tmp-e2e/data DOWNLOAD_DIR=$PWD/.tmp-e2e/downloads APP_ENV=development uvicorn app.main:app --host 127.0.0.1 --port 8080",
     url: 'http://127.0.0.1:8080/api/health',
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
     timeout: 30000,
   },
 });
