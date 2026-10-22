@@ -1,0 +1,986 @@
+{
+  "schema_version": "1.1",
+  "created_utc_date": "2026-10-22",
+  "source": "user-supplied Udemy URLs from original and additional October 22 chat batches",
+  "normalization": {
+    "protocol": "https",
+    "host": "www.udemy.com",
+    "path": "/course/<slug>/",
+    "removed": "couponCode query, lesson or quiz subpaths, fragment, trailing differences",
+    "duplicate_key": "case-folded Udemy course slug",
+    "content_deduplication": "NOT performed; distinguish URL-level duplicates from duplicated questions across different courses"
+  },
+  "summary": {
+    "submitted_links": 83,
+    "unique_courses": 69,
+    "duplicate_occurrences_removed": 14,
+    "by_certification": {
+      "CCAO-F": 25,
+      "CCDV-F": 9,
+      "CCAR-F": 17,
+      "CCAR-P": 13,
+      "ARCHITECT-VERIFY": 4,
+      "OTHER-CLAUDE": 1
+    },
+    "added_batch_submitted_links": 27,
+    "added_batch_new_courses": 26,
+    "added_batch_duplicate_occurrences": 1
+  },
+  "groups": [
+    {
+      "certification_code": "CCAO-F",
+      "certification_name": "Claude Certified Associate – Foundations",
+      "count": 25,
+      "courses": [
+        {
+          "slug": "ccao-f-6-exams",
+          "url": "https://www.udemy.com/course/ccao-f-6-exams/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            54
+          ],
+          "original_first_url": "https://www.udemy.com/course/ccao-f-6-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-01"
+        },
+        {
+          "slug": "ccao-f-exam-prep",
+          "url": "https://www.udemy.com/course/ccao-f-exam-prep/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            3
+          ],
+          "original_first_url": "https://www.udemy.com/course/ccao-f-exam-prep/learn/lecture/57314491#overview",
+          "inventory_id": "CCAO-F-02"
+        },
+        {
+          "slug": "ccao-f-practice-tests-4-full-mocks-240-questions",
+          "url": "https://www.udemy.com/course/ccao-f-practice-tests-4-full-mocks-240-questions/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            76
+          ],
+          "original_first_url": "https://www.udemy.com/course/ccao-f-practice-tests-4-full-mocks-240-questions/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAO-F-03"
+        },
+        {
+          "slug": "claude-associate",
+          "url": "https://www.udemy.com/course/claude-associate/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            53
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-associate/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-04"
+        },
+        {
+          "slug": "claude-associate-foundations-practice-exams",
+          "url": "https://www.udemy.com/course/claude-associate-foundations-practice-exams/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            24
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-associate-foundations-practice-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-05"
+        },
+        {
+          "slug": "claude-certified-associate-ccao-f-6-practice-exams-2026",
+          "url": "https://www.udemy.com/course/claude-certified-associate-ccao-f-6-practice-exams-2026/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            66
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-ccao-f-6-practice-exams-2026/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAO-F-06"
+        },
+        {
+          "slug": "claude-certified-associate-ccao-f-practice-tests",
+          "url": "https://www.udemy.com/course/claude-certified-associate-ccao-f-practice-tests/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            42,
+            50
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-ccao-f-practice-tests/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-07"
+        },
+        {
+          "slug": "claude-certified-associate-exam-prep-questions",
+          "url": "https://www.udemy.com/course/claude-certified-associate-exam-prep-questions/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            68
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-exam-prep-questions/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAO-F-08"
+        },
+        {
+          "slug": "claude-certified-associate-exam-questions",
+          "url": "https://www.udemy.com/course/claude-certified-associate-exam-questions/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            33
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-exam-questions/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-09"
+        },
+        {
+          "slug": "claude-certified-associate-foundations",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            8
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-10"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-4-practice-tests",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-4-practice-tests/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            12
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-4-practice-tests/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-11"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-6-practice-exams",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-6-practice-exams/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            16,
+            21
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-6-practice-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-12"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-ccao-f-",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            61
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAO-F-13"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-ccao-f-exam",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-exam/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            71
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-exam/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAO-F-14"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-ccao-f-exam-prep",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-exam-prep/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            18,
+            23
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-exam-prep/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-15"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-ccao-f-practice",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-practice/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            80
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-practice/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAO-F-16"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-ccao-f-practice-exams",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-practice-exams/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            25
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-practice-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-17"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-ccao-f-practice-tests",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-practice-tests/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            40,
+            48
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-practice-tests/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-18"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-practice-exam",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-practice-exam/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            29
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-practice-exam/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-19"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-practice-exam-pack",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-practice-exam-pack/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            2
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-practice-exam-pack/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-20"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-practice-tests-a",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-practice-tests-a/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            32
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-practice-tests-a/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-21"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-practice-tests-f",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-practice-tests-f/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            9
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-practice-tests-f/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-22"
+        },
+        {
+          "slug": "claude-certified-associate-foundations-tests",
+          "url": "https://www.udemy.com/course/claude-certified-associate-foundations-tests/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            51
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-associate-foundations-tests/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-23"
+        },
+        {
+          "slug": "exam-claude-certified-associate-foundations-ccao-f-2026",
+          "url": "https://www.udemy.com/course/exam-claude-certified-associate-foundations-ccao-f-2026/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            72
+          ],
+          "original_first_url": "https://www.udemy.com/course/exam-claude-certified-associate-foundations-ccao-f-2026/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAO-F-24"
+        },
+        {
+          "slug": "practice-exams-claude-certified-associate-foundations-ccao-f",
+          "url": "https://www.udemy.com/course/practice-exams-claude-certified-associate-foundations-ccao-f/",
+          "certification_code": "CCAO-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            4
+          ],
+          "original_first_url": "https://www.udemy.com/course/practice-exams-claude-certified-associate-foundations-ccao-f/?couponCode=PMNVD1525",
+          "inventory_id": "CCAO-F-25"
+        }
+      ]
+    },
+    {
+      "certification_code": "CCDV-F",
+      "certification_name": "Claude Certified Developer – Foundations",
+      "count": 9,
+      "courses": [
+        {
+          "slug": "claude-certified-developer-foundations",
+          "url": "https://www.udemy.com/course/claude-certified-developer-foundations/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            14,
+            19
+          ],
+          "original_first_url": "http://udemy.com/course/claude-certified-developer-foundations/?couponCode=PMNVD1525",
+          "inventory_id": "CCDV-F-01"
+        },
+        {
+          "slug": "claude-certified-developer-foundations-ccdv-f",
+          "url": "https://www.udemy.com/course/claude-certified-developer-foundations-ccdv-f/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            38,
+            46
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-developer-foundations-ccdv-f/?couponCode=PMNVD1525",
+          "inventory_id": "CCDV-F-02"
+        },
+        {
+          "slug": "claude-certified-developer-foundations-ccdv-f-exams-2026",
+          "url": "https://www.udemy.com/course/claude-certified-developer-foundations-ccdv-f-exams-2026/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            64
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-developer-foundations-ccdv-f-exams-2026/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCDV-F-03"
+        },
+        {
+          "slug": "claude-certified-developer-foundations-ccdv-f-practice-tests",
+          "url": "https://www.udemy.com/course/claude-certified-developer-foundations-ccdv-f-practice-tests/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            74
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-developer-foundations-ccdv-f-practice-tests/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCDV-F-04"
+        },
+        {
+          "slug": "claude-certified-developer-foundations-exam-questions-prep",
+          "url": "https://www.udemy.com/course/claude-certified-developer-foundations-exam-questions-prep/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            60
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-developer-foundations-exam-questions-prep/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCDV-F-05"
+        },
+        {
+          "slug": "claude-certified-developer-foundations-practice-exam-pack",
+          "url": "https://www.udemy.com/course/claude-certified-developer-foundations-practice-exam-pack/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            31
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-developer-foundations-practice-exam-pack/?couponCode=PMNVD1525",
+          "inventory_id": "CCDV-F-06"
+        },
+        {
+          "slug": "claude-certified-developer-foundations-practice-tests-prep",
+          "url": "https://www.udemy.com/course/claude-certified-developer-foundations-practice-tests-prep/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            79
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-developer-foundations-practice-tests-prep/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCDV-F-07"
+        },
+        {
+          "slug": "claude-developer-foundations-practice-exams",
+          "url": "https://www.udemy.com/course/claude-developer-foundations-practice-exams/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            56
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-developer-foundations-practice-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCDV-F-08"
+        },
+        {
+          "slug": "practice-exams-claude-certified-developer-foundations-ccdv-f",
+          "url": "https://www.udemy.com/course/practice-exams-claude-certified-developer-foundations-ccdv-f/",
+          "certification_code": "CCDV-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            7
+          ],
+          "original_first_url": "https://www.udemy.com/course/practice-exams-claude-certified-developer-foundations-ccdv-f/?couponCode=PMNVD1525",
+          "inventory_id": "CCDV-F-09"
+        }
+      ]
+    },
+    {
+      "certification_code": "CCAR-F",
+      "certification_name": "Claude Certified Architect – Foundations",
+      "count": 17,
+      "courses": [
+        {
+          "slug": "2026-claude-certified-architect-cca-f-practice-tests",
+          "url": "https://www.udemy.com/course/2026-claude-certified-architect-cca-f-practice-tests/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            81
+          ],
+          "original_first_url": "https://www.udemy.com/course/2026-claude-certified-architect-cca-f-practice-tests/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-F-01"
+        },
+        {
+          "slug": "cca-f-practice-tests-2026-4-full-mocks-240-questions",
+          "url": "https://www.udemy.com/course/cca-f-practice-tests-2026-4-full-mocks-240-questions/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            78
+          ],
+          "original_first_url": "https://www.udemy.com/course/cca-f-practice-tests-2026-4-full-mocks-240-questions/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-F-02"
+        },
+        {
+          "slug": "ccar-f-claude-certified-architect-foundations-mock-exams",
+          "url": "https://www.udemy.com/course/ccar-f-claude-certified-architect-foundations-mock-exams/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            69
+          ],
+          "original_first_url": "https://www.udemy.com/course/ccar-f-claude-certified-architect-foundations-mock-exams/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-F-03"
+        },
+        {
+          "slug": "certified-claude-architect-foundations",
+          "url": "https://www.udemy.com/course/certified-claude-architect-foundations/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            36,
+            44
+          ],
+          "original_first_url": "https://www.udemy.com/course/certified-claude-architect-foundations/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-04"
+        },
+        {
+          "slug": "claude-certified-architect-cca-f-6-practice-tests-2026",
+          "url": "https://www.udemy.com/course/claude-certified-architect-cca-f-6-practice-tests-2026/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            39,
+            47
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-cca-f-6-practice-tests-2026/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-05"
+        },
+        {
+          "slug": "claude-certified-architect-ccar-f-practice-tests-2026",
+          "url": "https://www.udemy.com/course/claude-certified-architect-ccar-f-practice-tests-2026/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            57
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-ccar-f-practice-tests-2026/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-F-06"
+        },
+        {
+          "slug": "claude-certified-architect-found-cca-f-6-practice-exams",
+          "url": "https://www.udemy.com/course/claude-certified-architect-found-cca-f-6-practice-exams/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            34
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-found-cca-f-6-practice-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-07"
+        },
+        {
+          "slug": "claude-certified-architect-foundations-5-practice-exams",
+          "url": "https://www.udemy.com/course/claude-certified-architect-foundations-5-practice-exams/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            13
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-foundations-5-practice-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-08"
+        },
+        {
+          "slug": "claude-certified-architect-foundations-bronze-to-gold",
+          "url": "https://www.udemy.com/course/claude-certified-architect-foundations-bronze-to-gold/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            62
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-foundations-bronze-to-gold/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-F-09"
+        },
+        {
+          "slug": "claude-certified-architect-foundations-cca",
+          "url": "https://www.udemy.com/course/claude-certified-architect-foundations-cca/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            65
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-foundations-cca/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-F-10"
+        },
+        {
+          "slug": "claude-certified-architect-foundations-cca-f-exams",
+          "url": "https://www.udemy.com/course/claude-certified-architect-foundations-cca-f-exams/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            67
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-foundations-cca-f-exams/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-F-11"
+        },
+        {
+          "slug": "claude-certified-architect-foundations-ccar-f-practice-tests",
+          "url": "https://www.udemy.com/course/claude-certified-architect-foundations-ccar-f-practice-tests/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            35,
+            43
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-foundations-ccar-f-practice-tests/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-12"
+        },
+        {
+          "slug": "claude-certified-architect-foundations-practice-tests-exam",
+          "url": "https://www.udemy.com/course/claude-certified-architect-foundations-practice-tests-exam/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            15,
+            20
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-foundations-practice-tests-exam/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-13"
+        },
+        {
+          "slug": "claude-certified-architect-foundations-practice-tests-m",
+          "url": "https://www.udemy.com/course/claude-certified-architect-foundations-practice-tests-m/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            17,
+            22
+          ],
+          "original_first_url": "http://udemy.com/course/claude-certified-architect-foundations-practice-tests-m/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-14"
+        },
+        {
+          "slug": "claude-certified-architectfoundations-cca-f-certification",
+          "url": "https://www.udemy.com/course/claude-certified-architectfoundations-cca-f-certification/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            58
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architectfoundations-cca-f-certification/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-F-15"
+        },
+        {
+          "slug": "new-claude-certified-architect-foundations-cca-f-exams",
+          "url": "https://www.udemy.com/course/new-claude-certified-architect-foundations-cca-f-exams/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            11
+          ],
+          "original_first_url": "https://www.udemy.com/course/new-claude-certified-architect-foundations-cca-f-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-16"
+        },
+        {
+          "slug": "practice-exams-claude-certified-architect-foundations-ccar-f",
+          "url": "https://www.udemy.com/course/practice-exams-claude-certified-architect-foundations-ccar-f/",
+          "certification_code": "CCAR-F",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            6
+          ],
+          "original_first_url": "https://www.udemy.com/course/practice-exams-claude-certified-architect-foundations-ccar-f/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-F-17"
+        }
+      ]
+    },
+    {
+      "certification_code": "CCAR-P",
+      "certification_name": "Claude Certified Architect – Professional",
+      "count": 13,
+      "courses": [
+        {
+          "slug": "ccar-p-6-exams",
+          "url": "https://www.udemy.com/course/ccar-p-6-exams/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            28
+          ],
+          "original_first_url": "https://www.udemy.com/course/ccar-p-6-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-P-01"
+        },
+        {
+          "slug": "ccar-p-claude-certified-architect-professional-mock-exams",
+          "url": "https://www.udemy.com/course/ccar-p-claude-certified-architect-professional-mock-exams/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            41,
+            49
+          ],
+          "original_first_url": "http://udemy.com/course/ccar-p-claude-certified-architect-professional-mock-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-P-02"
+        },
+        {
+          "slug": "claude-architect-professional-practice-exams",
+          "url": "https://www.udemy.com/course/claude-architect-professional-practice-exams/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            27
+          ],
+          "original_first_url": "http://udemy.com/course/claude-architect-professional-practice-exams/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-P-03"
+        },
+        {
+          "slug": "claude-certified-architect-professional",
+          "url": "https://www.udemy.com/course/claude-certified-architect-professional/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            77
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-professional/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-P-04"
+        },
+        {
+          "slug": "claude-certified-architect-professional-6-practice-tests",
+          "url": "https://www.udemy.com/course/claude-certified-architect-professional-6-practice-tests/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            59
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-professional-6-practice-tests/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-P-05"
+        },
+        {
+          "slug": "claude-certified-architect-professional-ccar-p-exam",
+          "url": "https://www.udemy.com/course/claude-certified-architect-professional-ccar-p-exam/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            52
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-professional-ccar-p-exam/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-P-06"
+        },
+        {
+          "slug": "claude-certified-architect-professional-exam-questions",
+          "url": "https://www.udemy.com/course/claude-certified-architect-professional-exam-questions/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            70
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-professional-exam-questions/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-P-07"
+        },
+        {
+          "slug": "claude-certified-architect-professional-practice-exam-pack",
+          "url": "https://www.udemy.com/course/claude-certified-architect-professional-practice-exam-pack/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            10
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-professional-practice-exam-pack/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-P-08"
+        },
+        {
+          "slug": "claude-certified-architect-professional-practice-tests-prep",
+          "url": "https://www.udemy.com/course/claude-certified-architect-professional-practice-tests-prep/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            82,
+            83
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-professional-practice-tests-prep/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-P-09"
+        },
+        {
+          "slug": "claude-certified-architect-professional-tests",
+          "url": "https://www.udemy.com/course/claude-certified-architect-professional-tests/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            55
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-professional-tests/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-P-10"
+        },
+        {
+          "slug": "exam-claude-certified-architect-professional-ccar-p-2026",
+          "url": "https://www.udemy.com/course/exam-claude-certified-architect-professional-ccar-p-2026/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            73
+          ],
+          "original_first_url": "https://www.udemy.com/course/exam-claude-certified-architect-professional-ccar-p-2026/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-P-11"
+        },
+        {
+          "slug": "practice-exams-claude-certified-architect-professional-ccarp",
+          "url": "https://www.udemy.com/course/practice-exams-claude-certified-architect-professional-ccarp/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            30
+          ],
+          "original_first_url": "https://www.udemy.com/course/practice-exams-claude-certified-architect-professional-ccarp/?couponCode=PMNVD1525",
+          "inventory_id": "CCAR-P-12"
+        },
+        {
+          "slug": "practice-exams-for-claude-certified-architect-ccar-p",
+          "url": "https://www.udemy.com/course/practice-exams-for-claude-certified-architect-ccar-p/",
+          "certification_code": "CCAR-P",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            63
+          ],
+          "original_first_url": "https://www.udemy.com/course/practice-exams-for-claude-certified-architect-ccar-p/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "CCAR-P-13"
+        }
+      ]
+    },
+    {
+      "certification_code": "ARCHITECT-VERIFY",
+      "certification_name": "Architect – level requires verification",
+      "count": 4,
+      "courses": [
+        {
+          "slug": "anthropic-claude-certified-architect-3-full-practice-exams",
+          "url": "https://www.udemy.com/course/anthropic-claude-certified-architect-3-full-practice-exams/",
+          "certification_code": "ARCHITECT-VERIFY",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            1
+          ],
+          "original_first_url": "https://www.udemy.com/course/anthropic-claude-certified-architect-3-full-practice-exams/?couponCode=PMNVD1525",
+          "inventory_id": "ARCHITECT-VERIFY-01"
+        },
+        {
+          "slug": "claude-certified-architect-6-practice-exams-video-review",
+          "url": "https://www.udemy.com/course/claude-certified-architect-6-practice-exams-video-review/",
+          "certification_code": "ARCHITECT-VERIFY",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            37,
+            45
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-6-practice-exams-video-review/?couponCode=PMNVD1525",
+          "inventory_id": "ARCHITECT-VERIFY-02"
+        },
+        {
+          "slug": "claude-certified-architect-exam-questions",
+          "url": "https://www.udemy.com/course/claude-certified-architect-exam-questions/",
+          "certification_code": "ARCHITECT-VERIFY",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            26
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-exam-questions/?couponCode=PMNVD1525",
+          "inventory_id": "ARCHITECT-VERIFY-03"
+        },
+        {
+          "slug": "claude-certified-architect-practice-tests",
+          "url": "https://www.udemy.com/course/claude-certified-architect-practice-tests/",
+          "certification_code": "ARCHITECT-VERIFY",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            5
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-certified-architect-practice-tests/?couponCode=PMNVD1525",
+          "inventory_id": "ARCHITECT-VERIFY-04"
+        }
+      ]
+    },
+    {
+      "certification_code": "OTHER-CLAUDE",
+      "certification_name": "Other Claude skills / certification not established",
+      "count": 1,
+      "courses": [
+        {
+          "slug": "claude-ai-pro-prompt-engineering-practice-tests-2026",
+          "url": "https://www.udemy.com/course/claude-ai-pro-prompt-engineering-practice-tests-2026/",
+          "certification_code": "OTHER-CLAUDE",
+          "classification_basis": "course URL slug only (not enrollment or page verified)",
+          "input_positions": [
+            75
+          ],
+          "original_first_url": "https://www.udemy.com/course/claude-ai-pro-prompt-engineering-practice-tests-2026/?couponCode=PMNVD1525",
+          "source_batch": "additional batch (October 22)",
+          "inventory_id": "OTHER-CLAUDE-01"
+        }
+      ]
+    }
+  ],
+  "removed_duplicate_occurrences": [
+    {
+      "duplicate_input_position": 19,
+      "kept_input_position": 14,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-developer-foundations/",
+      "slug": "claude-certified-developer-foundations"
+    },
+    {
+      "duplicate_input_position": 20,
+      "kept_input_position": 15,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-architect-foundations-practice-tests-exam/",
+      "slug": "claude-certified-architect-foundations-practice-tests-exam"
+    },
+    {
+      "duplicate_input_position": 21,
+      "kept_input_position": 16,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-associate-foundations-6-practice-exams/",
+      "slug": "claude-certified-associate-foundations-6-practice-exams"
+    },
+    {
+      "duplicate_input_position": 22,
+      "kept_input_position": 17,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-architect-foundations-practice-tests-m/",
+      "slug": "claude-certified-architect-foundations-practice-tests-m"
+    },
+    {
+      "duplicate_input_position": 23,
+      "kept_input_position": 18,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-exam-prep/",
+      "slug": "claude-certified-associate-foundations-ccao-f-exam-prep"
+    },
+    {
+      "duplicate_input_position": 43,
+      "kept_input_position": 35,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-architect-foundations-ccar-f-practice-tests/",
+      "slug": "claude-certified-architect-foundations-ccar-f-practice-tests"
+    },
+    {
+      "duplicate_input_position": 44,
+      "kept_input_position": 36,
+      "canonical_url": "https://www.udemy.com/course/certified-claude-architect-foundations/",
+      "slug": "certified-claude-architect-foundations"
+    },
+    {
+      "duplicate_input_position": 45,
+      "kept_input_position": 37,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-architect-6-practice-exams-video-review/",
+      "slug": "claude-certified-architect-6-practice-exams-video-review"
+    },
+    {
+      "duplicate_input_position": 46,
+      "kept_input_position": 38,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-developer-foundations-ccdv-f/",
+      "slug": "claude-certified-developer-foundations-ccdv-f"
+    },
+    {
+      "duplicate_input_position": 47,
+      "kept_input_position": 39,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-architect-cca-f-6-practice-tests-2026/",
+      "slug": "claude-certified-architect-cca-f-6-practice-tests-2026"
+    },
+    {
+      "duplicate_input_position": 48,
+      "kept_input_position": 40,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-associate-foundations-ccao-f-practice-tests/",
+      "slug": "claude-certified-associate-foundations-ccao-f-practice-tests"
+    },
+    {
+      "duplicate_input_position": 49,
+      "kept_input_position": 41,
+      "canonical_url": "https://www.udemy.com/course/ccar-p-claude-certified-architect-professional-mock-exams/",
+      "slug": "ccar-p-claude-certified-architect-professional-mock-exams"
+    },
+    {
+      "duplicate_input_position": 50,
+      "kept_input_position": 42,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-associate-ccao-f-practice-tests/",
+      "slug": "claude-certified-associate-ccao-f-practice-tests"
+    },
+    {
+      "duplicate_input_position": 83,
+      "kept_input_position": 82,
+      "canonical_url": "https://www.udemy.com/course/claude-certified-architect-professional-practice-tests-prep/",
+      "slug": "claude-certified-architect-professional-practice-tests-prep",
+      "duplicate_batch": "additional batch (October 22)"
+    }
+  ],
+  "notes": [
+    "Classification is provisional from course URL slugs; live course title, canonical course ID and track must be verified by Codex after authorized access.",
+    "Architect level unspecified courses remain unassigned to CCAR-F vs CCAR-P.",
+    "Courses may be lessons rather than practice tests; detect type instead of inventing questions.",
+    "A listing is not proof of course access or that question data can be exported.",
+    "Keep materials private and respect Udemy terms and publisher rights; do not bypass access controls.",
+    "New October 22 batch has one within-batch duplicate: claude-certified-architect-professional-practice-tests-prep at input positions 82 and 83.",
+    "The Claude AI Pro prompt-engineering course is segregated as OTHER-CLAUDE because its URL does not identify one of the four certification tracks.",
+    "CCA-F is sometimes used in course slugs about Architect Foundations; verify actual exam naming and categorization before final export aggregation.",
+    "URL-level cleanup does not confirm live course availability, canonical Udemy course ID, Udemy enrollment, or question-bank equivalence."
+  ],
+  "last_updated_utc_date": "2026-10-22",
+  "source_batches": [
+    {
+      "name": "original",
+      "input_positions": "1-56",
+      "submitted_links": 56,
+      "unique_slugs_at_stage": 43
+    },
+    {
+      "name": "additional",
+      "input_positions": "57-83",
+      "submitted_links": 27,
+      "new_unique_slugs": 26,
+      "duplicate_occurrences": 1
+    }
+  ]
+}

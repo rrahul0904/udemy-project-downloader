@@ -305,6 +305,7 @@ async def create_job(
     auto_subtitles: bool = Form(False),
     subtitle_languages: str = Form("en.*"),
     include_practice_tests: bool = Form(True),
+    download_videos: bool = Form(True),
     confirm_authorized: bool = Form(False),
 ) -> dict[str, Any]:
     _enforce_job_rate_limit(request)
@@ -339,6 +340,9 @@ async def create_job(
         if len(cookies_bytes) > MAX_COOKIES_BYTES:
             raise HTTPException(status_code=400, detail="Cookies file is larger than 8 MB.")
 
+    if not download_videos and (normalized.platform != "udemy" or not include_practice_tests):
+        raise HTTPException(status_code=400, detail="Practice-only mode requires an authenticated Udemy course and practice export enabled.")
+
     config = JobConfig(
         course_url=normalized.url,
         platform=normalized.platform,
@@ -349,6 +353,7 @@ async def create_job(
         auto_subtitles=auto_subtitles,
         subtitle_languages=subtitle_languages,
         include_practice_tests=include_practice_tests if normalized.platform == "udemy" else False,
+        download_videos=download_videos,
     )
     job = await manager.create_job(config, cookies_bytes)
     return job.as_dict()

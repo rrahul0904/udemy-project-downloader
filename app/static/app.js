@@ -2,6 +2,7 @@ const form = document.querySelector("#job-form");
 const formMessage = document.querySelector("#form-message");
 const jobsEl = document.querySelector("#jobs");
 const logsEl = document.querySelector("#logs");
+const detailsEl = document.querySelector("#job-details");
 const filesEl = document.querySelector("#files");
 const diskEl = document.querySelector("#disk");
 const rootEl = document.querySelector("#download-root");
@@ -11,10 +12,19 @@ const browserRow = document.querySelector("#browser-row");
 const cookiesRow = document.querySelector("#cookies-row");
 const urlInput = form.elements.course_url;
 const practiceTestsInput = form.elements.include_practice_tests;
+const videosInput = form.elements.download_videos;
+const modeEl = document.querySelector("#job-mode");
+const macPairButton = document.querySelector("#mac-pair");
+const macExportButton = document.querySelector("#mac-export");
+const macExportStatus = document.querySelector("#mac-export-status");
+const MAC_COMPANION = "http://127.0.0.1:8765";
+const MAC_TOKEN_KEY = "course-intelligence-mac-companion-token";
+let macPairWindow = null;
 
 let selectedJobId = null;
 let latestJobs = [];
 let authTouched = false;
+let practiceTouched = false;
 
 for (const input of form.elements.auth_method) {
   input.addEventListener("change", () => {
@@ -24,17 +34,27 @@ for (const input of form.elements.auth_method) {
 }
 
 urlInput.addEventListener("input", syncUrlMode);
+practiceTestsInput.addEventListener("change", () => {
+  practiceTouched = true;
+  syncJobMode();
+});
+videosInput.addEventListener("change", syncJobMode);
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   formMessage.textContent = "";
+
+  if (!videosInput.checked && !practiceTestsInput.checked) {
+    formMessage.textContent = "Select videos, practice tests, or both.";
+    return;
+  }
 
   const submit = form.querySelector("button[type='submit']");
   submit.disabled = true;
 
   try {
     const data = new FormData(form);
-    for (const name of ["subtitles", "auto_subtitles", "include_practice_tests", "confirm_authorized"]) {
+    for (const name of ["subtitles", "auto_subtitles", "include_practice_tests", "download_videos", "confirm_authorized"]) {
       data.set(name, form.elements[name].checked ? "true" : "false");
     }
 
@@ -50,12 +70,13 @@ form.addEventListener("submit", async (event) => {
     selectedJobId = payload.id;
     form.reset();
     authTouched = false;
+    practiceTouched = false;
     form.elements.auth_method.value = "none";
     form.elements.subtitles.checked = true;
-    form.elements.include_practice_tests.checked = true;
+    form.elements.include_practice_tests.checked = false;
     form.elements.include_practice_tests.disabled = false;
     form.elements.subtitle_languages.value = "en.*";
-    syncAuthMode();
+    syncUrlMode();
     await refreshAll();
   } catch (error) {
     formMessage.textContent = error.message;
@@ -65,6 +86,70 @@ form.addEventListener("submit", async (event) => {
 });
 
 refreshButton.addEventListener("click", refreshAll);
+
+macPairButton.addEventListener("click", async () => {
+  macExportStatus.textContent = "Checking the local Mac helper…";
+  try {
+    const response = await fetch(`${MAC_COMPANION}/api/health`, { mode: "cors" });
+    if (!response.ok) throw new Error("helper not ready");
+    macPairWindow = window.open(`${MAC_COMPANION}/pair`, "course-practice-pair", "popup,width=520,height=320");
+    if (!macPairWindow) throw new Error("popup blocked; allow popups for this local app and try again");
+    macExportStatus.textContent = "Approve the local pairing tab. No browser cookies are sent to this app.";
+  } catch (error) {
+    macExportStatus.textContent = `Mac helper unavailable. In the repository folder, run: .venv/bin/python scripts/mac_practice_companion.py (${error.message})`;
+  }
+});
+
+window.addEventListener("message", (event) => {
+  if (event.origin !== MAC_COMPANION || event.source !== macPairWindow ||
+      event.data?.type !== "course-practice-pair" || typeof event.data.token !== "string") return;
+  sessionStorage.setItem(MAC_TOKEN_KEY, event.data.token);
+  macPairWindow?.close();
+  macPairWindow = null;
+  macExportStatus.textContent = "Mac helper connected for this browser tab. Paste a Udemy course or quiz URL above.";
+});
+
+macExportButton.addEventListener("click", async () => {
+  const token = sessionStorage.getItem(MAC_TOKEN_KEY);
+  if (!token) {
+    macExportStatus.textContent = "Connect the Mac helper first.";
+    return;
+  }
+  macExportButton.disabled = true;
+  try {
+    const response = await fetch(`${MAC_COMPANION}/api/exports`, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "application/json", "X-Companion-Token": token },
+      body: JSON.stringify({ url: urlInput.value.trim(), browser: document.querySelector("#mac-export-browser").value }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Could not start local export.");
+    macExportStatus.textContent = "Reading the authorized browser session and exporting accessible practice exams…";
+    let result;
+    do {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const statusResponse = await fetch(`${MAC_COMPANION}/api/jobs/${encodeURIComponent(payload.id)}`, {
+        mode: "cors", headers: { "X-Companion-Token": token },
+      });
+      result = await statusResponse.json();
+      if (!statusResponse.ok) throw new Error(result.error || "Could not read export status.");
+      if (result.status === "running") macExportStatus.textContent = "Export in progress on this Mac…";
+    } while (result.status === "running");
+
+    const countText = `${result.exam_count} exam(s), ${result.question_count} question(s)`;
+    const filesText = result.files?.length ? ` Files: ${result.files.join(", ")}` : "";
+    const warningText = result.warnings?.length ? ` Warnings: ${result.warnings.join("; ")}` : "";
+    macExportStatus.textContent = result.status === "succeeded" || result.status === "partial"
+      ? `${result.status.toUpperCase()}: ${countText}.${filesText}${warningText}`
+      : `${result.status.toUpperCase()}: ${result.error || "No questions were exported."}${warningText}`;
+    await loadDownloads();
+  } catch (error) {
+    macExportStatus.textContent = `Export failed: ${error.message}`;
+  } finally {
+    macExportButton.disabled = false;
+  }
+});
 
 cancelButton.addEventListener("click", async () => {
   if (!selectedJobId) return;
@@ -107,14 +192,22 @@ function renderJobs() {
             ? `browser: ${job.browser}`
             : "cookies.txt";
       const platform = job.platform || "udemy";
-      const content = platform === "udemy" && job.include_practice_tests ? "tests" : "media";
+      const videoEnabled = job.download_videos !== false;
+      const content = platform === "udemy" && job.include_practice_tests
+        ? videoEnabled ? "videos + practice tests" : "practice tests only"
+        : "videos + resources";
+      const components = job.component_statuses || {};
+      const componentStatus = [
+        videoEnabled && components.video ? `video: ${components.video}` : null,
+        job.include_practice_tests && components.practice ? `practice: ${components.practice}` : null,
+      ].filter(Boolean).join(" · ");
       return `
         <article class="job ${job.id === selectedJobId ? "active" : ""}" data-job="${job.id}">
           <div class="job-top">
             <span class="job-title" title="${escapeHtml(job.course_url)}">${escapeHtml(title)}</span>
             <span class="status ${job.status}">${escapeHtml(job.status)}</span>
           </div>
-          <div class="job-meta">${created} · ${escapeHtml(platform)} · ${escapeHtml(job.quality)} · ${escapeHtml(auth)} · ${content}</div>
+          <div class="job-meta">${escapeHtml(created)} · ${escapeHtml(platform)} · ${escapeHtml(job.quality)} · ${escapeHtml(auth)} · ${content}${componentStatus ? ` · ${escapeHtml(componentStatus)}` : ""}</div>
         </article>
       `;
     })
@@ -135,35 +228,71 @@ function syncAuthMode() {
   const useCookiesFile = mode === "cookies_file";
   browserRow.hidden = !useBrowser;
   cookiesRow.hidden = !useCookiesFile;
+  form.elements.browser.disabled = !useBrowser;
+  form.elements.cookies_file.disabled = !useCookiesFile;
+  if (!useCookiesFile) form.elements.cookies_file.value = "";
   form.elements.cookies_file.required = useCookiesFile;
 }
 
 function syncUrlMode() {
   const platform = detectPlatform(urlInput.value);
-  if (platform === "youtube") {
+  if (platform !== "udemy") {
     practiceTestsInput.checked = false;
     practiceTestsInput.disabled = true;
+    if (urlInput.value.trim() && !videosInput.checked) videosInput.checked = true;
     if (!authTouched) {
       form.elements.auth_method.value = "none";
     }
   } else {
     practiceTestsInput.disabled = false;
-    if (platform === "udemy" && !authTouched) {
-      form.elements.auth_method.value = "browser";
+    if (!practiceTouched) {
       practiceTestsInput.checked = true;
     }
+    if (!authTouched) form.elements.auth_method.value = "cookies_file";
   }
   syncAuthMode();
+  syncJobMode();
+}
+
+function syncJobMode() {
+  if (videosInput.checked && practiceTestsInput.checked) {
+    modeEl.textContent = "Videos and authorized practice tests";
+  } else if (practiceTestsInput.checked) {
+    modeEl.textContent = "Practice tests only · video downloader skipped";
+  } else if (videosInput.checked) {
+    modeEl.textContent = "Video and resources only";
+  } else {
+    modeEl.textContent = "Select at least one option";
+  }
 }
 
 function renderSelectedLog() {
   const job = latestJobs.find((item) => item.id === selectedJobId);
   if (!job) {
     logsEl.textContent = "No job selected.";
+    detailsEl.textContent = "";
     cancelButton.disabled = true;
     return;
   }
 
+  const components = job.component_statuses || {};
+  const validation = job.practice_validation;
+  const parts = [
+    job.download_videos !== false ? `Video: ${components.video || job.status}` : "Video: not requested",
+    job.include_practice_tests ? `Practice tests: ${components.practice || job.status}` : "Practice tests: not requested",
+  ];
+  if (validation) {
+    parts.push(`Course discovered: ${validation.course_discovered ? "YES" : "NO"}`);
+    parts.push(`Practice sets: ${validation.practice_sets_discovered ?? 0}`);
+    parts.push(`Questions: ${validation.questions_retrieved ?? 0} retrieved / ${validation.questions_expected ?? "unknown"} expected`);
+    parts.push(`Questions with choices: ${validation.questions_with_answer_choices ?? 0}`);
+    parts.push(`Count reconciliation: ${validation.count_reconciliation || "UNKNOWN"}`);
+    parts.push(`Answers: ${validation.questions_with_correct_answers ?? 0} · Explanations: ${validation.questions_with_explanations ?? 0}`);
+    parts.push(`Exports: ${["json", "html", "markdown", "pdf"]
+      .map((format) => `${format.toUpperCase()} ${validation[`${format}_generated`] ? "YES" : "NO"}`)
+      .join(" · ")}`);
+  }
+  detailsEl.textContent = parts.join("\n");
   logsEl.textContent = job.logs.length ? job.logs.join("\n") : "Waiting for output...";
   logsEl.scrollTop = logsEl.scrollHeight;
   cancelButton.disabled = !["queued", "running"].includes(job.status);

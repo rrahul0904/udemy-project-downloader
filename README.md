@@ -113,6 +113,69 @@ The archive flow supports:
 
 Udemy downloads require an authorized browser session or cookies file. Private/restricted media likewise requires normal account authorization when the underlying source supports it. Uploaded cookie material is temporary and is removed after the job; stale app cookie files are removed at startup.
 
+## Udemy practice tests on macOS without cookies.txt
+
+For an enrolled Udemy course, the Docker application still supports temporary
+Netscape `cookies.txt` uploads. When Docker cannot access the Mac's browser
+profile, use the **host-side practice exporter** instead: it reads the existing
+signed-in Chrome/Safari/Firefox session in memory and writes files directly to
+the bind-mounted `downloads` directory. There is no cookie file to create,
+upload, or commit, and no browser credentials enter the Docker container.
+
+From the repository on the **Mac host**, not inside the container, run the CLI directly:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python scripts/mac_practice_export.py \
+  "https://www.udemy.com/course/anthropic-claude-certified-architect-3-full-practice-exams/learn/quiz/7570481#overview" \
+  --browser chrome
+```
+
+If your login is in Safari, use `--browser safari`. This is a separate
+local command; it does **not** automatically launch from the container's
+"Use local browser session" form option or appear as a Docker job.
+Because `./downloads` is mounted by `docker-compose.yml`, resulting
+PDF/HTML/JSON/Markdown files are available through the app's Files view.
+
+- Log into Udemy in the chosen Mac browser first, and confirm you can open
+  the enrolled practice exam. Mac Keychain/Full Disk Access settings may
+  require approval before your terminal can read that browser's cookies.
+- The helper accesses normal authenticated Udemy learner endpoints only:
+  no DRM/paywall/CAPTCHA or other access-control bypass.
+- The script returns failure for zero retrieved questions, and for a mismatch
+  against expected question counts when Udemy supplies such counts.
+- A single quiz link can only prove access to that quiz; to check multiple
+  practice exams, supply the full course URL and verify the returned sets.
+- Since it directly writes to `./downloads`, use the repo's own checkout
+  location for both `docker compose` and this Mac command.
+
+For a one-click UI workflow, start the loopback-only companion on the Mac host:
+
+```bash
+docker compose up --build -d
+.venv/bin/python scripts/mac_practice_companion.py
+```
+
+If port 8080 is already used, start the app with `APP_PORT=8081 docker compose up --build -d`.
+In the local app at `http://127.0.0.1:8080` (or `:8081` when selected), paste the Udemy course or quiz URL,
+choose Chrome or Safari in **Mac Browser Export**, connect the helper, then click
+**Export Practice Exams**. The pairing token stays in this browser tab's session
+storage. The companion binds only to `127.0.0.1:8765`, accepts requests only
+from the local app origins, and requires both the pairing token and exact
+`Origin`. It returns export counts and file paths; browser session cookies stay
+in host process memory and are never sent to Docker or a remote server. Files
+are written directly to the repository's bind-mounted `downloads` directory.
+
+Each export includes a consolidated PDF, one PDF per exam, JSON, HTML, Markdown,
+and a `*-verification-report.md` with actual/expected counts and warnings. The
+UI's Files inventory updates when the export completes. Stop the companion with
+Ctrl-C when finished. A remote deployment cannot access a local Chrome/Safari
+profile and cannot use this companion.
+
+For the separate, resumable 69-course Claude certification workflow, see
+[`docs/claude-certifications/README.md`](docs/claude-certifications/README.md).
+
 ## Production security boundary
 
 The production release is deliberately a **private/personal application**, not an anonymous public downloader.
