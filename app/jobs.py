@@ -455,7 +455,10 @@ class JobManager:
         job.practice_validation = result.validation
         self._log(job, f"Practice test export complete: {result.item_count} item(s), {result.assessment_count} question(s).")
         self._log(job, f"Practice test files written to {practice_dir}.")
-        self._log(job, f"Practice test PDF ready: {result.output_pdf.name}.")
+        if result.assessment_count:
+            self._log(job, f"Practice test PDF ready: {result.output_pdf.name}.")
+        else:
+            self._log(job, f"Diagnostic PDF only (no questions): {result.output_pdf.name}.")
         if result.output_set_pdfs:
             self._log(job, f"Practice set PDFs ready: {len(result.output_set_pdfs)} file(s).")
         if result.warnings:
