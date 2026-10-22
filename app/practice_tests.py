@@ -57,6 +57,22 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
     else:
         warnings.append("Could not discover the Udemy course id from the course page.")
 
+    # A learner may paste a link to a single quiz. Curriculum discovery is not
+    # guaranteed to expose the quiz, so use the ID in that URL as a bounded
+    # fallback. All questions must still be returned by the learner's ordinary
+    # authenticated Udemy session; no access restrictions are bypassed.
+    linked_quiz_id = _quiz_id_from_url(course_url)
+    if linked_quiz_id and not any(
+        str(_item_id(item)) == linked_quiz_id for item in practice_items
+    ):
+        practice_items.append(
+            {"_class": "quiz", "id": linked_quiz_id, "title": "Linked practice exam"}
+        )
+        warnings.append(
+            "Linked quiz was not found in the accessible curriculum; "
+            "attempting the quiz id from the submitted URL."
+        )
+
     exported_tests: list[dict[str, Any]] = []
     assessment_total = 0
     course_prefix = _friendly_course_prefix(title, course_url)
@@ -154,6 +170,9 @@ def _build_session(cookies_path: Path, referer: str) -> requests.Session:
 def _discover_course(session: requests.Session, course_url: str) -> tuple[str | None, str | None, list[str]]:
     warnings: list[str] = []
     response = session.get(course_url, timeout=30)
+    if _is_udemy_login_redirect(getattr(response, "url", course_url)):
+        warnings.append("Udemy redirected the course page to sign-in. Check the uploaded cookies and course enrollment.")
+        return None, None, warnings
     if response.status_code >= 400:
         warnings.append(f"Course page returned HTTP {response.status_code}.")
         return None, None, warnings
@@ -262,6 +281,11 @@ def _fetch_paginated(
             break
 
         next_params = None
+        if _is_udemy_login_redirect(getattr(response, "url", next_url)):
+            warnings.append(
+                f"{label} request redirected to Udemy sign-in; verify the authenticated session and enrollment."
+            )
+            break
         if response.status_code in {401, 403}:
             warnings.append(f"{label} endpoint rejected the authenticated request with HTTP {response.status_code}.")
             break
@@ -420,6 +444,24 @@ def _slugify_file_stem(value: str) -> str:
     safe = re.sub(r"[^A-Za-z0-9]+", "-", _clean_text(value).lower())
     safe = "-".join(part for part in safe.split("-") if part)
     return safe[:90] or "practice-tests"
+
+
+def _is_udemy_login_redirect(url: str) -> bool:
+    """Identify Udemy's sign-in pages after normal HTTP redirects."""
+    parsed = urlparse(url)
+    if not (parsed.hostname or "").lower().endswith("udemy.com"):
+        return False
+    path = parsed.path.lower()
+    return path.startswith(("/join/", "/user/login", "/login", "/authentication/"))
+
+
+def _quiz_id_from_url(course_url: str) -> str | None:
+    """Read only a numeric quiz ID from a specific Udemy learner deep link."""
+    path = [part for part in urlparse(course_url).path.split("/") if part]
+    for index in range(len(path) - 2):
+        if path[index:index + 2] == ["learn", "quiz"] and path[index + 2].isdigit():
+            return path[index + 2]
+    return None
 
 
 def _udemy_course_slug(course_url: str) -> str | None:
