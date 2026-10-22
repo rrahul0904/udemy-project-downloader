@@ -20,6 +20,7 @@ from .safety import slug_from_url
 SUPPORTED_BROWSER_COOKIES = {"brave", "chrome", "chromium", "edge", "firefox", "opera", "safari", "vivaldi"}
 MIN_FREE_BYTES = 256 * 1024 * 1024
 LOG_PERSIST_INTERVAL = 25
+MEDIA_SUFFIXES = {".mp4", ".mkv", ".webm", ".mov", ".m4v", ".m4a", ".mp3", ".aac", ".ogg", ".opus"}
 
 
 @dataclass
@@ -46,6 +47,8 @@ class Job:
     updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     logs: list[str] = field(default_factory=list)
     return_code: int | None = None
+    component_statuses: dict[str, str] = field(default_factory=dict)
+    practice_validation: dict[str, Any] | None = None
     process: asyncio.subprocess.Process | None = field(default=None, repr=False)
     task: asyncio.Task[Any] | None = field(default=None, repr=False)
 
@@ -71,6 +74,8 @@ class Job:
             "quality": self.config.quality,
             "include_practice_tests": self.config.include_practice_tests,
             "download_videos": self.config.download_videos,
+            "component_statuses": self.component_statuses,
+            "practice_validation": self.practice_validation,
             "output_dir": str(self.output_dir),
             "logs": self.logs,
         }
@@ -85,6 +90,8 @@ class Job:
             "updated_at": self.updated_at,
             "logs": self.logs,
             "return_code": self.return_code,
+            "component_statuses": self.component_statuses,
+            "practice_validation": self.practice_validation,
         }
 
 
@@ -97,6 +104,7 @@ class JobManager:
         self.max_download_bytes = max(0, int(os.getenv("MAX_DOWNLOAD_BYTES", "0") or 0))
         self.downloads_dir.mkdir(parents=True, exist_ok=True)
         self.cookies_dir.mkdir(parents=True, exist_ok=True)
+        os.chmod(self.cookies_dir, 0o700)
         self.jobs: dict[str, Job] = {}
         self._semaphore = asyncio.Semaphore(max(1, max_concurrent_jobs))
         self._load_state()
@@ -120,6 +128,8 @@ class JobManager:
                     updated_at=item.get("updated_at") or datetime.now(timezone.utc).isoformat(),
                     logs=list(item.get("logs") or [])[-500:],
                     return_code=item.get("return_code"),
+                    component_statuses=dict(item.get("component_statuses") or {}),
+                    practice_validation=item.get("practice_validation"),
                 )
             except (KeyError, TypeError, ValueError):
                 continue
@@ -134,6 +144,7 @@ class JobManager:
         temp = self.state_path.with_suffix(".tmp")
         payload = {"jobs": [job.persistent_dict() for job in self.list()[:500]]}
         temp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        os.chmod(temp, 0o600)
         temp.replace(self.state_path)
 
     def _cleanup_stale_cookies(self) -> None:
@@ -163,10 +174,14 @@ class JobManager:
             if not cookies_bytes:
                 raise ValueError("Cookies file is required for cookies-file auth.")
             cookies_path = self.cookies_dir / f"{job_id}.txt"
-            cookies_path.write_bytes(cookies_bytes)
-            os.chmod(cookies_path, 0o600)
+            with os.fdopen(os.open(cookies_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as file:
+                file.write(cookies_bytes)
 
         job = Job(id=job_id, config=config, output_dir=output_dir)
+        job.component_statuses = {
+            "video": "queued" if config.download_videos else "not_requested",
+            "practice": "queued" if config.include_practice_tests else "not_requested",
+        }
         job.add_log("Job queued.")
         self.jobs[job_id] = job
         self._persist()
@@ -185,7 +200,11 @@ class JobManager:
             return False
         if job.status not in {"queued", "running"}:
             return True
+        was_queued = job.status == "queued"
         job.status = "cancelled"
+        for component, status in job.component_statuses.items():
+            if status in {"queued", "running"}:
+                job.component_statuses[component] = "cancelled"
         self._log(job, "Cancellation requested.")
         if job.process and job.process.returncode is None:
             job.process.terminate()
@@ -194,8 +213,11 @@ class JobManager:
             except asyncio.TimeoutError:
                 job.process.kill()
                 await job.process.wait()
-        elif job.task and not job.task.done():
+        elif was_queued and job.task and not job.task.done():
             job.task.cancel()
+            (self.cookies_dir / f"{job.id}.txt").unlink(missing_ok=True)
+        # A running threaded exporter cannot be stopped safely. Let it finish,
+        # then _run_job observes the cancellation before setting a final status.
         self._persist()
         return True
 
@@ -213,54 +235,72 @@ class JobManager:
 
     async def _run_job(self, job: Job, cookies_path: Path | None) -> None:
         job.status = "running"
+        job.component_statuses.setdefault("video", "queued" if job.config.download_videos else "not_requested")
+        job.component_statuses.setdefault(
+            "practice", "queued" if job.config.include_practice_tests else "not_requested"
+        )
         try:
             if cookies_path is None and job.config.auth_method == "browser":
-                cookies_path = await self._extract_browser_cookies(job)
+                try:
+                    cookies_path = await self._extract_browser_cookies(job)
+                except Exception as exc:
+                    auth_status = "failed" if isinstance(exc, ValueError) else "not_accessible"
+                    for component, status in job.component_statuses.items():
+                        if status == "queued":
+                            job.component_statuses[component] = auth_status
+                    job.status = auth_status
+                    self._log(job, f"Browser authentication unavailable: {type(exc).__name__}.")
+                    return
+            if job.status == "cancelled":
+                return
 
             if job.config.download_videos:
-                self._log(job, "Starting yt-dlp.")
-                command = self._build_command(job, cookies_path)
-                self._log(job, "Downloader command prepared.")
-                job.process = await asyncio.create_subprocess_exec(
-                    *command,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.STDOUT,
-                )
-                log_lines = 0
-                while True:
-                    line = await job.process.stdout.readline()
-                    if not line:
-                        break
-                    self._log(job, line.decode("utf-8", errors="replace").strip(), persist=False)
-                    log_lines += 1
-                    if log_lines % LOG_PERSIST_INTERVAL == 0:
-                        self._persist()
-                job.return_code = await job.process.wait()
-                self._log(job, f"yt-dlp finished with exit code {job.return_code}.")
+                job.component_statuses["video"] = "running"
+                try:
+                    await self._run_video(job, cookies_path)
+                except Exception as exc:
+                    job.component_statuses["video"] = "failed"
+                    self._log(job, f"Video download failed: {type(exc).__name__}: {exc}")
                 if job.status == "cancelled":
                     return
             else:
                 job.return_code = 0
+                job.component_statuses["video"] = "not_requested"
                 self._log(job, "Practice-only job: video download skipped.")
 
-            export_ok = True
+            practice_status = "not_requested"
             if job.config.include_practice_tests and job.config.platform == "udemy":
-                export_ok = await self._export_practice_tests(job, cookies_path)
+                job.component_statuses["practice"] = "running"
+                practice_status = await self._export_practice_tests(job, cookies_path)
+                # Older test doubles may still return a boolean.
+                if isinstance(practice_status, bool):
+                    practice_status = "succeeded" if practice_status else "failed"
+                job.component_statuses["practice"] = "cancelled" if job.status == "cancelled" else practice_status
+            elif job.config.include_practice_tests:
+                practice_status = "no_practice_tests"
+                job.component_statuses["practice"] = practice_status
 
-            videos_ok = not job.config.download_videos or job.return_code == 0
-            job.status = "succeeded" if videos_ok and export_ok else "failed"
-            if not videos_ok:
-                self._log(job, "Video download failed; check the yt-dlp output.")
-            if not export_ok:
-                self._log(job, "Practice export failed or no questions were retrieved.")
+            if job.status == "cancelled":
+                return
+            video_status = job.component_statuses.get("video", "not_requested")
+            job.status = self._overall_status(video_status, practice_status)
+            if video_status in {"failed", "partial"}:
+                self._log(job, f"Video download {video_status}; check the yt-dlp output.")
+            if practice_status not in {"not_requested", "succeeded"}:
+                self._log(job, f"Practice export status: {practice_status}.")
+                if practice_status == "failed":
+                    self._log(job, "Practice export failed or no questions were retrieved.")
             self._persist()
-        except FileNotFoundError:
-            job.status = "failed"
-            self._log(job, "yt-dlp was not found in the server Python environment.")
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            job.status = "failed"
+            for component, status in job.component_statuses.items():
+                if status == "running":
+                    job.component_statuses[component] = "failed"
+            job.status = self._overall_status(
+                job.component_statuses.get("video", "not_requested"),
+                job.component_statuses.get("practice", "not_requested"),
+            )
             self._log(job, f"Job failed: {type(exc).__name__}: {exc}")
         finally:
             job.process = None
@@ -272,14 +312,82 @@ class JobManager:
                 job.updated_at = datetime.now(timezone.utc).isoformat()
                 self._persist()
 
+    async def _run_video(self, job: Job, cookies_path: Path | None) -> None:
+        self._log(job, "Starting yt-dlp.")
+        command = self._build_command(job, cookies_path)
+        self._log(job, "Downloader command prepared.")
+        job.process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        log_lines = 0
+        downloader_errors = 0
+        while True:
+            line = await job.process.stdout.readline()
+            if not line:
+                break
+            message = line.decode("utf-8", errors="replace").strip()
+            if message.lstrip().startswith("ERROR:"):
+                downloader_errors += 1
+            self._log(job, message, persist=False)
+            log_lines += 1
+            if log_lines % LOG_PERSIST_INTERVAL == 0:
+                self._persist()
+        job.return_code = await job.process.wait()
+        if job.status == "cancelled":
+            job.component_statuses["video"] = "cancelled"
+            self._log(job, "Video download cancelled.")
+            return
+        media_count = self._media_file_count(job.output_dir)
+        if media_count == 0:
+            job.component_statuses["video"] = "failed"
+        elif job.return_code != 0 or downloader_errors:
+            job.component_statuses["video"] = "partial"
+        else:
+            job.component_statuses["video"] = "succeeded"
+        self._log(job, f"yt-dlp finished with exit code {job.return_code}.")
+        self._log(job, f"Video result: {media_count} media file(s), {downloader_errors} downloader error(s).")
+
+    @staticmethod
+    def _overall_status(video_status: str, practice_status: str) -> str:
+        requested = {status for status in (video_status, practice_status) if status != "not_requested"}
+        if not requested:
+            return "failed"
+        if requested == {"succeeded"}:
+            return "succeeded"
+        if "succeeded" in requested or "partial" in requested:
+            return "partial"
+        if "failed" in requested:
+            return "failed"
+        if "not_accessible" in requested:
+            return "not_accessible"
+        if "no_practice_tests" in requested:
+            return "no_practice_tests"
+        return "failed"
+
+    @staticmethod
+    def _media_file_count(output_dir: Path) -> int:
+        root = output_dir.resolve()
+        return sum(
+            1 for path in output_dir.rglob("*")
+            if path.is_file() and path.resolve().is_relative_to(root) and path.suffix.lower() in MEDIA_SUFFIXES
+        )
+
     async def _extract_browser_cookies(self, job: Job) -> Path:
         browser = job.config.browser or ""
         if browser not in SUPPORTED_BROWSER_COOKIES:
             raise ValueError("Unsupported local browser selection.")
         cookies_path = self.cookies_dir / f"{job.id}.txt"
         self._log(job, f"Reading cookies from local {browser} profile.")
-        await asyncio.to_thread(self._save_browser_cookies, browser, cookies_path)
-        os.chmod(cookies_path, 0o600)
+        with os.fdopen(os.open(cookies_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb"):
+            pass
+        try:
+            await asyncio.to_thread(self._save_browser_cookies, browser, cookies_path)
+            os.chmod(cookies_path, 0o600)
+        except BaseException:
+            cookies_path.unlink(missing_ok=True)
+            raise
         self._log(job, "Browser cookies loaded for this job.")
         return cookies_path
 
@@ -330,20 +438,21 @@ class JobManager:
             return urlunparse((parsed.scheme, parsed.netloc, f"/{parts[1]}/", "", parsed.query, ""))
         return config.course_url
 
-    async def _export_practice_tests(self, job: Job, cookies_path: Path | None) -> bool:
+    async def _export_practice_tests(self, job: Job, cookies_path: Path | None) -> str:
         if not cookies_path:
             self._log(job, "Practice test export skipped: Udemy authentication cookies are required.")
-            return False
+            return "not_accessible"
         self._log(job, "Exporting practice tests and quizzes.")
         practice_dir = job.output_dir / "_practice-tests"
         try:
             result = await asyncio.to_thread(export_practice_tests, job.config.course_url, cookies_path, practice_dir)
         except PracticeExportError as exc:
             self._log(job, f"Practice test export skipped: {exc}")
-            return False
+            return "failed"
         except Exception as exc:
             self._log(job, f"Practice test export failed: {type(exc).__name__}: {exc}")
-            return False
+            return "failed"
+        job.practice_validation = result.validation
         self._log(job, f"Practice test export complete: {result.item_count} item(s), {result.assessment_count} question(s).")
         self._log(job, f"Practice test files written to {practice_dir}.")
         self._log(job, f"Practice test PDF ready: {result.output_pdf.name}.")
@@ -353,8 +462,8 @@ class JobManager:
             self._log(job, f"Practice export warnings: {len(result.warnings)}. See {result.output_html.name}.")
         if result.assessment_count == 0:
             self._log(job, "No practice questions retrieved; this job is not verified as a successful exam export.")
-            return False
-        return True
+        status = (result.validation or {}).get("status")
+        return status if status in {"succeeded", "partial", "failed", "not_accessible", "no_practice_tests"} else "failed"
 
     @staticmethod
     def _format_selector(quality: str) -> str | None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape, unescape
@@ -35,6 +36,7 @@ class PracticeExportResult:
     output_pdf: Path
     output_set_pdfs: list[Path]
     warnings: list[str]
+    validation: dict[str, Any] | None = None
 
 
 def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path) -> PracticeExportResult:
@@ -71,6 +73,13 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
         item_warnings: list[str] = []
         if item_id:
             assessments, item_warnings = _fetch_assessments(session, course_url, str(item_id), item_version)
+            assessments, duplicate_count = _deduplicate_assessments(assessments)
+            if duplicate_count:
+                item_warnings.append(f"Removed {duplicate_count} duplicate question(s) from {display_title}.")
+            missing_prompts = sum(not _assessment_prompt(assessment) for assessment in assessments)
+            if missing_prompts:
+                assessments = [assessment for assessment in assessments if _assessment_prompt(assessment)]
+                item_warnings.append(f"Omitted {missing_prompts} assessment record(s) without question text from {display_title}.")
         else:
             item_warnings.append(f"Could not determine a quiz id for '{display_title}'.")
 
@@ -95,6 +104,7 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
             }
         )
 
+    validation = _validation_summary(course_id, exported_tests, warnings)
     payload = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "course_url": course_url,
@@ -102,6 +112,7 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
         "course_title": title,
         "practice_set_prefix": course_prefix,
         "practice_tests": exported_tests,
+        "validation": validation,
         "warnings": warnings,
     }
 
@@ -110,11 +121,28 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
     markdown_path = output_dir / f"{file_stem}.md"
     html_path = output_dir / f"{file_stem}.html"
     pdf_path = output_dir / f"{file_stem}.pdf"
-    json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    markdown_path.write_text(_to_markdown(payload), encoding="utf-8")
-    html_path.write_text(_to_html(payload), encoding="utf-8")
-    _to_pdf(payload, pdf_path)
-    set_pdf_paths = _write_set_pdfs(payload, output_dir)
+    validation.update({
+        "json_generated": True,
+        "html_generated": True,
+        "markdown_generated": True,
+        "pdf_generated": True,
+    })
+    with tempfile.TemporaryDirectory(prefix=".practice-stage-", dir=output_dir) as stage_name:
+        stage_dir = Path(stage_name)
+        staged_pdf = stage_dir / pdf_path.name
+        _to_pdf(payload, staged_pdf)
+        staged_set_pdfs = _write_set_pdfs(payload, stage_dir, reserved_names={pdf_path.name})
+        staged_html = stage_dir / html_path.name
+        staged_html.write_text(_to_html(payload), encoding="utf-8")
+        staged_markdown = stage_dir / markdown_path.name
+        staged_markdown.write_text(_to_markdown(payload), encoding="utf-8")
+        staged_json = stage_dir / json_path.name
+        staged_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        staged_files = [staged_pdf, *staged_set_pdfs, staged_html, staged_markdown, staged_json]
+        if any(not path.is_file() or path.stat().st_size == 0 for path in staged_files):
+            raise PracticeExportError("Practice export did not produce all expected files.")
+        _publish_staged_files(staged_files, output_dir, stage_dir)
+        set_pdf_paths = [output_dir / path.name for path in staged_set_pdfs]
 
     return PracticeExportResult(
         course_id=course_id,
@@ -126,7 +154,125 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
         output_pdf=pdf_path,
         output_set_pdfs=set_pdf_paths,
         warnings=warnings,
+        validation=validation,
     )
+
+
+def _publish_staged_files(staged_files: list[Path], output_dir: Path, stage_dir: Path) -> None:
+    backups: dict[Path, Path] = {}
+    published: list[Path] = []
+    try:
+        for staged in staged_files:
+            destination = output_dir / staged.name
+            if destination.exists() or destination.is_symlink():
+                if not destination.is_file() or destination.is_symlink():
+                    raise PracticeExportError(f"Cannot replace existing export path: {destination.name}.")
+                backup = stage_dir / f".backup-{len(backups)}"
+                destination.replace(backup)
+                backups[destination] = backup
+            staged.replace(destination)
+            published.append(destination)
+    except Exception:
+        for destination in reversed(published):
+            destination.unlink(missing_ok=True)
+        for destination, backup in backups.items():
+            if backup.exists():
+                backup.replace(destination)
+        raise
+
+
+def _validation_summary(
+    course_id: str | None, tests: list[dict[str, Any]], warnings: list[str]
+) -> dict[str, Any]:
+    expected = [_int_or_none(test.get("expected_assessment_count")) for test in tests]
+    retrieved = sum(len(test.get("assessments") or []) for test in tests)
+    known_expected = sum(count for count in expected if count is not None)
+    all_known = bool(tests) and all(count is not None for count in expected)
+    mismatch = any(
+        count is not None and count != len(test.get("assessments") or [])
+        for count, test in zip(expected, tests)
+    )
+    answers = sum(
+        bool(_assessment_answers(question))
+        for test in tests for question in test.get("assessments") or []
+    )
+    correct = sum(
+        _has_correct_answer(question)
+        for test in tests for question in test.get("assessments") or []
+    )
+    explanations = sum(
+        bool(_assessment_explanation(question))
+        for test in tests for question in test.get("assessments") or []
+    )
+    inaccessible = any(
+        "HTTP 401" in warning or "HTTP 403" in warning or "redirected to login" in warning
+        for warning in warnings
+    )
+    if inaccessible and not retrieved:
+        status, reconciliation = "not_accessible", "FAIL"
+    elif not course_id or (not tests and warnings):
+        status, reconciliation = "failed", "FAIL"
+    elif not tests:
+        status, reconciliation = "no_practice_tests", "UNKNOWN"
+    elif not retrieved:
+        status, reconciliation = "failed", "FAIL"
+    elif mismatch or any(
+        marker in warning
+        for warning in warnings
+        for marker in ("Could not fetch", "endpoint", "Stopped paginating")
+    ):
+        status, reconciliation = "partial", "PARTIAL"
+    elif answers < retrieved or any("Omitted " in warning and "without question text" in warning for warning in warnings):
+        status, reconciliation = "partial", "PASS" if all_known else "UNKNOWN"
+    elif all_known:
+        status, reconciliation = "succeeded", "PASS"
+    else:
+        status, reconciliation = "partial", "UNKNOWN"
+    return {
+        "status": status,
+        "course_discovered": bool(course_id),
+        "practice_sets_discovered": len(tests),
+        "questions_expected": known_expected if all_known else None,
+        "questions_retrieved": retrieved,
+        "questions_with_answer_choices": answers,
+        "questions_missing_answer_choices": retrieved - answers,
+        "questions_with_correct_answers": correct,
+        "questions_with_explanations": explanations,
+        "count_reconciliation": reconciliation,
+        "json_generated": False,
+        "html_generated": False,
+        "markdown_generated": False,
+        "pdf_generated": False,
+    }
+
+
+def _has_correct_answer(question: dict[str, Any]) -> bool:
+    if question.get("correct_response") or question.get("correct_responses"):
+        return True
+    prompt = _assessment_prompt_data(question)
+    for source in (prompt, question):
+        answers = source.get("answers") or source.get("response_options")
+        if isinstance(answers, list) and any(
+            isinstance(answer, dict) and answer.get("is_correct") is True for answer in answers
+        ):
+            return True
+    return False
+
+
+def _deduplicate_assessments(items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    unique: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in items:
+        identifier = item.get("id") or item.get("assessment_id")
+        # A repeated id on adjacent API pages is one question. Identical prompts without
+        # ids can be legitimate separate questions, so those are left untouched.
+        key = str(identifier) if identifier is not None else ""
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        unique.append(item)
+    return unique, len(items) - len(unique)
 
 
 def _build_session(cookies_path: Path, referer: str) -> requests.Session:
@@ -153,9 +299,15 @@ def _build_session(cookies_path: Path, referer: str) -> requests.Session:
 
 def _discover_course(session: requests.Session, course_url: str) -> tuple[str | None, str | None, list[str]]:
     warnings: list[str] = []
-    response = session.get(course_url, timeout=30)
+    try:
+        response = session.get(course_url, timeout=30)
+    except requests.RequestException as exc:
+        raise PracticeExportError(f"Could not access the course page: {type(exc).__name__}.") from exc
     if response.status_code >= 400:
         warnings.append(f"Course page returned HTTP {response.status_code}.")
+        return None, None, warnings
+    if "/login" in urlparse(getattr(response, "url", course_url)).path:
+        warnings.append("Course page redirected to login; authenticated access is required.")
         return None, None, warnings
 
     text = response.text
@@ -208,12 +360,15 @@ def _fetch_curriculum(
         (f"{host}/api-2.0/courses/{course_id}/subscriber-curriculum-items/", legacy_params),
     ]
     warnings: list[str] = []
+    saw_clean_empty = False
     for endpoint, params in endpoints:
         items, endpoint_warnings = _fetch_paginated(session, endpoint, params=params, label="curriculum")
         if items:
-            return items, warnings + endpoint_warnings
+            return items, endpoint_warnings
+        if not endpoint_warnings:
+            saw_clean_empty = True
         warnings.extend(endpoint_warnings)
-    return [], warnings
+    return [], [] if saw_clean_empty and not _has_auth_warning(warnings) else warnings
 
 
 def _fetch_assessments(
@@ -233,15 +388,22 @@ def _fetch_assessments(
     ]
 
     warnings: list[str] = []
+    saw_clean_empty = False
     for endpoint in endpoints:
         items, endpoint_warnings = _fetch_paginated(
             session, endpoint, params=params, label=f"assessments for quiz {quiz_id}"
         )
         if items:
-            return items, warnings + endpoint_warnings
+            return items, endpoint_warnings
+        if not endpoint_warnings:
+            saw_clean_empty = True
         warnings.extend(endpoint_warnings)
 
-    return [], warnings
+    return [], [] if saw_clean_empty and not _has_auth_warning(warnings) else warnings
+
+
+def _has_auth_warning(warnings: list[str]) -> bool:
+    return any("HTTP 401" in warning or "HTTP 403" in warning for warning in warnings)
 
 
 def _fetch_paginated(
@@ -280,10 +442,20 @@ def _fetch_paginated(
 
         if isinstance(data, dict):
             results = data.get("results", [])
-            if isinstance(results, list):
-                items.extend(item for item in results if isinstance(item, dict))
+            if not isinstance(results, list):
+                warnings.append(f"{label} endpoint returned an unexpected results shape.")
+                break
+            items.extend(item for item in results if isinstance(item, dict))
             raw_next = data.get("next")
-            next_url = urljoin(next_url, raw_next) if raw_next else None
+            if raw_next is not None and not isinstance(raw_next, str):
+                warnings.append(f"{label} endpoint returned an invalid next-page link.")
+                break
+            candidate = urljoin(next_url, raw_next) if raw_next else None
+            if candidate and _base_url(candidate) != _base_url(url):
+                warnings.append(f"Stopped paginating {label}: next page was on another origin.")
+                next_url = None
+            else:
+                next_url = candidate
         elif isinstance(data, list):
             items.extend(item for item in data if isinstance(item, dict))
             next_url = None
@@ -291,7 +463,7 @@ def _fetch_paginated(
             warnings.append(f"{label} endpoint returned an unexpected JSON shape.")
             break
 
-    if pages >= 100:
+    if next_url and pages >= 100:
         warnings.append(f"Stopped paginating {label} after 100 pages.")
 
     return items, warnings
@@ -437,8 +609,11 @@ def _title_from_slug(value: str | None) -> str | None:
     return " ".join(part.capitalize() for part in re.split(r"[-_\s]+", value) if part)
 
 
-def _write_set_pdfs(payload: dict[str, Any], output_dir: Path) -> list[Path]:
+def _write_set_pdfs(
+    payload: dict[str, Any], output_dir: Path, reserved_names: set[str] | None = None
+) -> list[Path]:
     paths: list[Path] = []
+    used_names = set(reserved_names or set())
     for test in payload.get("practice_tests") or []:
         title = _clean_text(str(test.get("title") or "Practice set"))
         set_payload = {
@@ -446,7 +621,14 @@ def _write_set_pdfs(payload: dict[str, Any], output_dir: Path) -> list[Path]:
             "practice_tests": [test],
             "warnings": [],
         }
-        path = output_dir / f"{_slugify_file_stem(title)}.pdf"
+        stem = _slugify_file_stem(title)
+        name = f"{stem}.pdf"
+        suffix = 1
+        while name in used_names:
+            suffix += 1
+            name = f"{stem}-set-{suffix}.pdf"
+        used_names.add(name)
+        path = output_dir / name
         _to_pdf(set_payload, path)
         paths.append(path)
     return paths
@@ -461,6 +643,11 @@ def _to_markdown(payload: dict[str, Any]) -> str:
         f"Exported: {payload.get('exported_at')}",
         "",
     ]
+    validation = payload.get("validation")
+    if isinstance(validation, dict):
+        lines.extend(["## Validation", ""])
+        lines.extend(f"- {label}: {_validation_value(validation.get(key))}" for key, label in _VALIDATION_LABELS)
+        lines.append("")
 
     warnings = payload.get("warnings") or []
     if warnings:
@@ -504,6 +691,15 @@ def _to_html(payload: dict[str, Any]) -> str:
     title = _clean_text(str(payload.get("course_title") or "Practice Tests"))
     warnings = payload.get("warnings") or []
     tests = payload.get("practice_tests") or []
+    validation = payload.get("validation")
+    validation_html = ""
+    if isinstance(validation, dict):
+        validation_html = "<section><h2>Validation</h2><ul>{}</ul></section>".format(
+            "".join(
+                f"<li><strong>{escape(label)}:</strong> {escape(_validation_value(validation.get(key)))}</li>"
+                for key, label in _VALIDATION_LABELS
+            )
+        )
     warning_html = ""
     if warnings:
         warning_html = "<section><h2>Warnings</h2><ul>{}</ul></section>".format(
@@ -611,6 +807,7 @@ def _to_html(payload: dict[str, Any]) -> str:
         <p class="meta">Course ID: {escape(str(payload.get("course_id") or "Unknown"))}</p>
         <p class="meta">Exported: {escape(str(payload.get("exported_at") or ""))}</p>
       </header>
+      {validation_html}
       {warning_html}
       {"".join(test_sections)}
     </main>
@@ -715,6 +912,12 @@ def _to_pdf(payload: dict[str, Any], output_path: Path) -> None:
     story.append(Paragraph(f"Source: {_pdf_escape(str(payload.get('course_url') or ''))}", meta_style))
     story.append(Paragraph(f"Exported: {_pdf_escape(str(payload.get('exported_at') or ''))}", meta_style))
     story.append(Spacer(1, 0.16 * inch))
+
+    validation = payload.get("validation")
+    if isinstance(validation, dict):
+        story.append(Paragraph("Validation", section_style))
+        for key, label in _VALIDATION_LABELS:
+            story.append(Paragraph(f"{_pdf_escape(label)}: {_pdf_escape(_validation_value(validation.get(key)))}", normal))
 
     warnings = payload.get("warnings") or []
     if warnings:
@@ -892,3 +1095,28 @@ def _first_match(text: str, patterns: list[str]) -> str | None:
 def _base_url(course_url: str) -> str:
     parsed = urlparse(course_url)
     return f"{parsed.scheme}://{parsed.netloc}"
+
+
+_VALIDATION_LABELS = (
+    ("course_discovered", "Course discovered"),
+    ("practice_sets_discovered", "Practice sets discovered"),
+    ("questions_expected", "Questions expected"),
+    ("questions_retrieved", "Questions retrieved"),
+    ("questions_with_answer_choices", "Questions with answer choices"),
+    ("questions_missing_answer_choices", "Questions missing answer choices"),
+    ("questions_with_correct_answers", "Questions with correct answers"),
+    ("questions_with_explanations", "Questions with explanations"),
+    ("count_reconciliation", "Count reconciliation"),
+    ("json_generated", "JSON generated"),
+    ("html_generated", "HTML generated"),
+    ("markdown_generated", "Markdown generated"),
+    ("pdf_generated", "PDF generated"),
+)
+
+
+def _validation_value(value: Any) -> str:
+    if value is None:
+        return "UNKNOWN"
+    if isinstance(value, bool):
+        return "YES" if value else "NO"
+    return str(value)
