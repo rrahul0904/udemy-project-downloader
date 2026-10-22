@@ -153,10 +153,12 @@ PDF/HTML/JSON/Markdown files are available through the app's Files view.
 For a one-click UI workflow, start the loopback-only companion on the Mac host:
 
 ```bash
+docker compose up --build -d
 .venv/bin/python scripts/mac_practice_companion.py
 ```
 
-In the local app at `http://127.0.0.1:8080`, paste the Udemy course or quiz URL,
+If port 8080 is already used, start the app with `APP_PORT=8081 docker compose up --build -d`.
+In the local app at `http://127.0.0.1:8080` (or `:8081` when selected), paste the Udemy course or quiz URL,
 choose Chrome or Safari in **Mac Browser Export**, connect the helper, then click
 **Export Practice Exams**. The pairing token stays in this browser tab's session
 storage. The companion binds only to `127.0.0.1:8765`, accepts requests only

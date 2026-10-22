@@ -1,10 +1,9 @@
 services:
   course-intelligence:
     build: .
-    container_name: udemy-project-downloader
     init: true
     ports:
-      - "127.0.0.1:8080:8000"
+      - "127.0.0.1:${APP_PORT:-8080}:8000"
     environment:
       APP_ENV: ${APP_ENV:-development}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://127.0.0.1:8080}

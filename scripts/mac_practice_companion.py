@@ -27,7 +27,10 @@ from yt_dlp.cookies import extract_cookies_from_browser
 DOWNLOADS = ROOT / "downloads"
 HOST = "127.0.0.1"
 PORT = 8765
-APP_ORIGINS = {"http://127.0.0.1:8080", "http://localhost:8080"}
+APP_ORIGINS = {
+    "http://127.0.0.1:8080", "http://localhost:8080",
+    "http://127.0.0.1:8081", "http://localhost:8081",
+}
 TOKEN = secrets.token_urlsafe(32)
 JOBS: dict[str, dict] = {}
 LOCK = threading.Lock()
