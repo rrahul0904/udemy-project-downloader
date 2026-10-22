@@ -113,6 +113,46 @@ The archive flow supports:
 
 Udemy downloads require an authorized browser session or cookies file. Private/restricted media likewise requires normal account authorization when the underlying source supports it. Uploaded cookie material is temporary and is removed after the job; stale app cookie files are removed at startup.
 
+## Udemy practice tests on macOS without cookies.txt
+
+For an enrolled Udemy course, the Docker application still supports temporary
+Netscape `cookies.txt` uploads. When Docker cannot access the Mac's browser
+profile, use the **host-side practice exporter** instead: it reads the existing
+signed-in Chrome/Safari/Firefox session in memory and writes files directly to
+the bind-mounted `downloads` directory. There is no cookie file to create,
+upload, or commit, and no browser credentials enter the Docker container.
+
+From the repository on the **Mac host**, not inside the container:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python scripts/mac_practice_export.py \
+  "https://www.udemy.com/course/anthropic-claude-certified-architect-3-full-practice-exams/learn/quiz/7570481#overview" \
+  --browser chrome
+```
+
+If your login is in Safari, use `--browser safari`. This is a separate
+local command; it does **not** automatically launch from the container's
+"Use local browser session" form option or appear as a Docker job.
+Because `./downloads` is mounted by `docker-compose.yml`, resulting
+PDF/HTML/JSON/Markdown files are available through the app's Files view.
+
+- Log into Udemy in the chosen Mac browser first, and confirm you can open
+  the enrolled practice exam. Mac Keychain/Full Disk Access settings may
+  require approval before your terminal can read that browser's cookies.
+- The helper accesses normal authenticated Udemy learner endpoints only:
+  no DRM/paywall/CAPTCHA or other access-control bypass.
+- The script returns failure for zero retrieved questions, and for a mismatch
+  against expected question counts when Udemy supplies such counts.
+- A single quiz link can only prove access to that quiz; to check multiple
+  practice exams, supply the full course URL and verify the returned sets.
+- Since it directly writes to `./downloads`, use the repo's own checkout
+  location for both `docker compose` and this Mac command.
+
+This Mac helper is separate from server-side production deployments; a
+remote Render deployment cannot access your local Chrome/Safari profile.
+
 ## Production security boundary
 
 The production release is deliberately a **private/personal application**, not an anonymous public downloader.

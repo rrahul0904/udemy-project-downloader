@@ -6,7 +6,7 @@ import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from html import escape, unescape
-from http.cookiejar import MozillaCookieJar
+from http.cookiejar import CookieJar, MozillaCookieJar
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -39,7 +39,13 @@ class PracticeExportResult:
     validation: dict[str, Any] | None = None
 
 
-def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path) -> PracticeExportResult:
+def export_practice_tests(
+    course_url: str,
+    cookies_path: Path | None,
+    output_dir: Path,
+    *,
+    session: requests.Session | None = None,
+) -> PracticeExportResult:
     """Best-effort export of quiz/practice-test data visible to the authenticated user.
 
     Udemy does not provide a stable public learner export API for practice tests. This
@@ -48,7 +54,13 @@ def export_practice_tests(course_url: str, cookies_path: Path, output_dir: Path)
     """
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    session = _build_session(cookies_path, course_url)
+    # A Mac host-side helper can supply an already authenticated in-memory
+    # session. This avoids writing or uploading Netscape cookies.txt, but does
+    # not weaken Udemy authentication or change the Docker API's protections.
+    if session is None:
+        if cookies_path is None:
+            raise PracticeExportError("An authorized Udemy browser session is required.")
+        session = _build_session(cookies_path, course_url)
     course_id, title, warnings = _discover_course(session, course_url)
 
     practice_items: list[dict[str, Any]] = []
@@ -300,6 +312,11 @@ def _build_session(cookies_path: Path, referer: str) -> requests.Session:
     except Exception as exc:  # pragma: no cover - exact parser errors vary by Python.
         raise PracticeExportError("Cookies file must be in Netscape cookies.txt format.") from exc
 
+    return _session_from_cookiejar(jar, referer)
+
+
+def _session_from_cookiejar(jar: CookieJar, referer: str) -> requests.Session:
+    """Use browser credentials in memory; never write them into artifacts."""
     session = requests.Session()
     session.cookies = jar
     session.headers.update(
