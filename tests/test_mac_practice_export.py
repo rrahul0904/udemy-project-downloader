@@ -12,6 +12,7 @@ from requests.cookies import create_cookie
 
 from app.practice_tests import _session_from_cookiejar, export_practice_tests
 from scripts.mac_practice_export import _udemy_cookie_count, run
+from scripts.mac_practice_companion import APP_ORIGINS, TOKEN, allowed_origin, valid_pairing
 
 
 URL = (
@@ -28,6 +29,14 @@ def fake_udemy_jar():
 
 
 class MacPracticeExportTests(unittest.TestCase):
+    def test_companion_requires_exact_local_origin_and_pairing_token(self):
+        origin = sorted(APP_ORIGINS)[0]
+        self.assertTrue(allowed_origin(origin))
+        self.assertFalse(allowed_origin("https://attacker.example"))
+        self.assertTrue(valid_pairing(origin, TOKEN))
+        self.assertFalse(valid_pairing(origin, "wrong-token"))
+        self.assertFalse(valid_pairing("https://attacker.example", TOKEN))
+
     def test_session_uses_in_memory_browser_jar(self):
         jar = fake_udemy_jar()
         session = _session_from_cookiejar(jar, URL)
@@ -46,6 +55,10 @@ class MacPracticeExportTests(unittest.TestCase):
                 assessment_count=121,
                 output_html=out / "diagnostic.html",
                 output_pdf=out / "practice.pdf",
+                output_set_pdfs=[],
+                output_json=out / "practice.json",
+                output_markdown=out / "practice.md",
+                output_verification_report=out / "verification.md",
                 warnings=[],
             )
             with (
@@ -96,7 +109,6 @@ class MacPracticeExportTests(unittest.TestCase):
                       side_effect=AssertionError("should never load cookie file")),
                 patch("app.practice_tests._discover_course", return_value=(None, None, ["no course id"])),
                 patch("app.practice_tests._fetch_assessments", return_value=([{"prompt": "Synthetic Q"}], [])),
-                patch("app.practice_tests._to_pdf"),
             ):
                 result = export_practice_tests(URL, None, Path(temp), session=session)
             self.assertEqual(result.assessment_count, 1)

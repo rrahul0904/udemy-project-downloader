@@ -109,3 +109,43 @@ test('Acquire form and console fit desktop and phone viewports', async ({ page }
     await page.screenshot({ path: testInfo.outputPath(`acquire-${viewport.width}.png`), fullPage: true });
   }
 });
+
+test('Mac browser export pairs locally, submits the course URL, and reports created files', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.open = () => window;
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = String(input);
+      if (url === 'http://127.0.0.1:8765/api/health') {
+        return new Response(JSON.stringify({ status: 'ready' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (url === 'http://127.0.0.1:8765/api/exports') {
+        window.__macExportRequest = JSON.parse(init.body);
+        return new Response(JSON.stringify({ id: 'synthetic-job', status: 'running' }), { status: 202, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (url === 'http://127.0.0.1:8765/api/jobs/synthetic-job') {
+        return new Response(JSON.stringify({
+          id: 'synthetic-job', status: 'succeeded', exam_count: 2, question_count: 120,
+          files: ['course/_practice-tests/exam.pdf', 'course/_practice-tests/export.json'], warnings: [],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return originalFetch(input, init);
+    };
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect Mac helper' }).click();
+  await expect(page.locator('#mac-export-status')).toContainText('Approve the local pairing tab');
+  await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', {
+    origin: 'http://127.0.0.1:8765', source: window,
+    data: { type: 'course-practice-pair', token: 'synthetic-pairing-token' },
+  })));
+  await expect(page.locator('#mac-export-status')).toContainText('Mac helper connected');
+  await page.getByLabel('Media or course URL').fill('https://www.udemy.com/course/authorized-course/');
+  await page.getByRole('button', { name: 'Export Practice Exams' }).click();
+  await expect(page.locator('#mac-export-status')).toContainText('SUCCEEDED: 2 exam(s), 120 question(s)');
+  await expect(page.locator('#mac-export-status')).toContainText('course/_practice-tests/export.json');
+  expect(await page.evaluate(() => window.__macExportRequest)).toEqual({
+    url: 'https://www.udemy.com/course/authorized-course/', browser: 'chrome',
+  });
+  expect(await page.evaluate(() => sessionStorage.getItem('course-intelligence-mac-companion-token'))).toBe('synthetic-pairing-token');
+});

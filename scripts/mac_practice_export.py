@@ -93,7 +93,9 @@ def run(argv: list[str] | None = None) -> int:
             print(f"Export was not accessible: {exc}", file=sys.stderr)
             return 1
         except Exception as exc:
-            print(f"Export failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            # Keep arbitrary library/browser exception text out of logs in case
+            # it contains profile or credential material.
+            print(f"Export failed ({type(exc).__name__}). Check the diagnostic files and browser access.", file=sys.stderr)
             return 1
     finally:
         session.close()
@@ -115,6 +117,12 @@ def run(argv: list[str] | None = None) -> int:
         return 1
 
     print(f"Exported PDF: {result.output_pdf}")
+    for path in result.output_set_pdfs:
+        print(f"Exported exam PDF: {path}")
+    print(f"Structured JSON: {result.output_json}")
+    print(f"Readable HTML: {result.output_html}")
+    print(f"Markdown: {result.output_markdown}")
+    print(f"Verification report: {result.output_verification_report}")
     if any("not found in the accessible curriculum" in warning for warning in result.warnings):
         print("Note: The direct quiz was attempted without the full curriculum. "
               "This run does not prove that every exam in the course was retrieved.")

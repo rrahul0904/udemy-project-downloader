@@ -14,6 +14,12 @@ const urlInput = form.elements.course_url;
 const practiceTestsInput = form.elements.include_practice_tests;
 const videosInput = form.elements.download_videos;
 const modeEl = document.querySelector("#job-mode");
+const macPairButton = document.querySelector("#mac-pair");
+const macExportButton = document.querySelector("#mac-export");
+const macExportStatus = document.querySelector("#mac-export-status");
+const MAC_COMPANION = "http://127.0.0.1:8765";
+const MAC_TOKEN_KEY = "course-intelligence-mac-companion-token";
+let macPairWindow = null;
 
 let selectedJobId = null;
 let latestJobs = [];
@@ -80,6 +86,70 @@ form.addEventListener("submit", async (event) => {
 });
 
 refreshButton.addEventListener("click", refreshAll);
+
+macPairButton.addEventListener("click", async () => {
+  macExportStatus.textContent = "Checking the local Mac helper…";
+  try {
+    const response = await fetch(`${MAC_COMPANION}/api/health`, { mode: "cors" });
+    if (!response.ok) throw new Error("helper not ready");
+    macPairWindow = window.open(`${MAC_COMPANION}/pair`, "course-practice-pair", "popup,width=520,height=320");
+    if (!macPairWindow) throw new Error("popup blocked; allow popups for this local app and try again");
+    macExportStatus.textContent = "Approve the local pairing tab. No browser cookies are sent to this app.";
+  } catch (error) {
+    macExportStatus.textContent = `Mac helper unavailable. In the repository folder, run: .venv/bin/python scripts/mac_practice_companion.py (${error.message})`;
+  }
+});
+
+window.addEventListener("message", (event) => {
+  if (event.origin !== MAC_COMPANION || event.source !== macPairWindow ||
+      event.data?.type !== "course-practice-pair" || typeof event.data.token !== "string") return;
+  sessionStorage.setItem(MAC_TOKEN_KEY, event.data.token);
+  macPairWindow?.close();
+  macPairWindow = null;
+  macExportStatus.textContent = "Mac helper connected for this browser tab. Paste a Udemy course or quiz URL above.";
+});
+
+macExportButton.addEventListener("click", async () => {
+  const token = sessionStorage.getItem(MAC_TOKEN_KEY);
+  if (!token) {
+    macExportStatus.textContent = "Connect the Mac helper first.";
+    return;
+  }
+  macExportButton.disabled = true;
+  try {
+    const response = await fetch(`${MAC_COMPANION}/api/exports`, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "application/json", "X-Companion-Token": token },
+      body: JSON.stringify({ url: urlInput.value.trim(), browser: document.querySelector("#mac-export-browser").value }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Could not start local export.");
+    macExportStatus.textContent = "Reading the authorized browser session and exporting accessible practice exams…";
+    let result;
+    do {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const statusResponse = await fetch(`${MAC_COMPANION}/api/jobs/${encodeURIComponent(payload.id)}`, {
+        mode: "cors", headers: { "X-Companion-Token": token },
+      });
+      result = await statusResponse.json();
+      if (!statusResponse.ok) throw new Error(result.error || "Could not read export status.");
+      if (result.status === "running") macExportStatus.textContent = "Export in progress on this Mac…";
+    } while (result.status === "running");
+
+    const countText = `${result.exam_count} exam(s), ${result.question_count} question(s)`;
+    const filesText = result.files?.length ? ` Files: ${result.files.join(", ")}` : "";
+    const warningText = result.warnings?.length ? ` Warnings: ${result.warnings.join("; ")}` : "";
+    macExportStatus.textContent = result.status === "succeeded" || result.status === "partial"
+      ? `${result.status.toUpperCase()}: ${countText}.${filesText}${warningText}`
+      : `${result.status.toUpperCase()}: ${result.error || "No questions were exported."}${warningText}`;
+    await loadDownloads();
+  } catch (error) {
+    macExportStatus.textContent = `Export failed: ${error.message}`;
+  } finally {
+    macExportButton.disabled = false;
+  }
+});
 
 cancelButton.addEventListener("click", async () => {
   if (!selectedJobId) return;

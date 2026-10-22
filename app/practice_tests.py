@@ -35,6 +35,7 @@ class PracticeExportResult:
     output_html: Path
     output_pdf: Path
     output_set_pdfs: list[Path]
+    output_verification_report: Path
     warnings: list[str]
     validation: dict[str, Any] | None = None
 
@@ -149,11 +150,13 @@ def export_practice_tests(
     markdown_path = output_dir / f"{file_stem}.md"
     html_path = output_dir / f"{file_stem}.html"
     pdf_path = output_dir / f"{file_stem}.pdf"
+    verification_report_path = output_dir / f"{file_stem}-verification-report.md"
     validation.update({
         "json_generated": True,
         "html_generated": True,
         "markdown_generated": True,
         "pdf_generated": True,
+        "verification_report_generated": True,
     })
     with tempfile.TemporaryDirectory(prefix=".practice-stage-", dir=output_dir) as stage_name:
         stage_dir = Path(stage_name)
@@ -164,9 +167,11 @@ def export_practice_tests(
         staged_html.write_text(_to_html(payload), encoding="utf-8")
         staged_markdown = stage_dir / markdown_path.name
         staged_markdown.write_text(_to_markdown(payload), encoding="utf-8")
+        staged_report = stage_dir / verification_report_path.name
+        staged_report.write_text(_to_verification_report(payload), encoding="utf-8")
         staged_json = stage_dir / json_path.name
         staged_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-        staged_files = [staged_pdf, *staged_set_pdfs, staged_html, staged_markdown, staged_json]
+        staged_files = [staged_pdf, *staged_set_pdfs, staged_html, staged_markdown, staged_json, staged_report]
         if any(not path.is_file() or path.stat().st_size == 0 for path in staged_files):
             raise PracticeExportError("Practice export did not produce all expected files.")
         _publish_staged_files(staged_files, output_dir, stage_dir)
@@ -181,6 +186,7 @@ def export_practice_tests(
         output_html=html_path,
         output_pdf=pdf_path,
         output_set_pdfs=set_pdf_paths,
+        output_verification_report=verification_report_path,
         warnings=warnings,
         validation=validation,
     )
@@ -749,6 +755,46 @@ def _to_markdown(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _to_verification_report(payload: dict[str, Any]) -> str:
+    """Write an auditable count summary without duplicating session data."""
+    validation = payload.get("validation") or {}
+    lines = [
+        "# Practice Export Verification Report",
+        "",
+        f"- Course: {_clean_text(str(payload.get('course_title') or 'Unknown'))}",
+        f"- Course ID: {payload.get('course_id') or 'Unknown'}",
+        f"- Submitted URL: {payload.get('course_url') or 'Unknown'}",
+        f"- Exported at: {payload.get('exported_at') or 'Unknown'}",
+        f"- Status: {validation.get('status', 'unknown')}",
+        f"- Practice exams discovered: {validation.get('practice_sets_discovered', 0)}",
+        f"- Questions: {validation.get('questions_retrieved', 0)} retrieved / {validation.get('questions_expected', 'unknown')} expected",
+        f"- Count reconciliation: {validation.get('count_reconciliation', 'UNKNOWN')}",
+        f"- Questions with choices: {validation.get('questions_with_answer_choices', 0)}",
+        f"- Correct answers returned: {validation.get('questions_with_correct_answers', 0)}",
+        f"- Explanations returned: {validation.get('questions_with_explanations', 0)}",
+        "",
+        "## Per exam",
+        "",
+    ]
+    tests = payload.get("practice_tests") or []
+    if not tests:
+        lines.append("No exams were returned by the authenticated endpoints.")
+    for test in tests:
+        questions = test.get("assessments") or []
+        expected = test.get("expected_assessment_count")
+        lines.append(
+            f"- {test.get('title') or 'Practice exam'} (quiz ID {test.get('id') or 'unknown'}): "
+            f"{len(questions)} retrieved / {expected if expected is not None else 'unknown'} expected"
+        )
+    lines.extend(["", "## Warnings", ""])
+    warnings = payload.get("warnings") or []
+    if warnings:
+        lines.extend(f"- {_clean_text(str(warning))}" for warning in warnings)
+    else:
+        lines.append("- None")
+    return "\n".join(lines) + "\n"
+
+
 def _to_html(payload: dict[str, Any]) -> str:
     title = _clean_text(str(payload.get("course_title") or "Practice Tests"))
     warnings = payload.get("warnings") or []
@@ -1173,6 +1219,7 @@ _VALIDATION_LABELS = (
     ("html_generated", "HTML generated"),
     ("markdown_generated", "Markdown generated"),
     ("pdf_generated", "PDF generated"),
+    ("verification_report_generated", "Verification report generated"),
 )
 
 

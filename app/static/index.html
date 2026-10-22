@@ -24,6 +24,13 @@
     <section class="acquire-layout">
       <aside class="acquire-config">
         <div style="margin-bottom:16px"><span class="ci-eyebrow">ARCHIVE JOB</span><h2 style="margin:4px 0 5px">Paste a supported link</h2><p class="ci-secondary" style="margin:0;font-size:13px">Use Validate URL first to see the detected source and whether its adapter is enabled.</p></div>
+        <section class="mac-export" aria-labelledby="mac-export-title">
+          <span class="ci-eyebrow">MAC BROWSER EXPORT</span><h3 id="mac-export-title">Export practice exams</h3>
+          <p>Uses your signed-in Chrome or Safari session on this Mac. The session stays on the host.</p>
+          <label><span>Browser</span><select id="mac-export-browser"><option value="chrome">Chrome</option><option value="safari">Safari</option></select></label>
+          <div class="mac-export-actions"><button id="mac-pair" type="button">Connect Mac helper</button><button id="mac-export" class="primary" type="button">Export Practice Exams</button></div>
+          <p id="mac-export-status" role="status" aria-live="polite">Start the local Mac helper once, then connect it here.</p>
+        </section>
         <form id="job-form" class="form">
           <label><span>Media or course URL</span><input name="course_url" type="url" placeholder="https://www.instagram.com/reel/... or https://www.youtube.com/watch?v=..." required /></label>
           <fieldset class="auth-box"><legend>Authentication</legend><label><input name="auth_method" type="radio" value="none" checked /><span>Public / no cookies</span></label><label><input name="auth_method" type="radio" value="browser" /><span>Use local browser session</span></label><label><input name="auth_method" type="radio" value="cookies_file" /><span>Upload cookies.txt</span></label></fieldset>

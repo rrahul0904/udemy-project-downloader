@@ -321,10 +321,15 @@ class PracticeTestFormattingTests(unittest.TestCase):
             self.assertEqual(result.assessment_count, 1)
             self.assertTrue(any("without question text" in warning for warning in result.warnings))
             self.assertEqual(len(result.output_set_pdfs), 1)
+            self.assertTrue(result.output_verification_report.is_file())
+            report = result.output_verification_report.read_text(encoding="utf-8")
+            self.assertIn("1 retrieved / 2 expected", report)
+            self.assertIn("Count reconciliation: PARTIAL", report)
             payload = json.loads(result.output_json.read_text(encoding="utf-8"))
             self.assertEqual(payload["validation"], result.validation)
             self.assertTrue(all(payload["validation"][key] for key in (
-                "json_generated", "html_generated", "markdown_generated", "pdf_generated"
+                "json_generated", "html_generated", "markdown_generated", "pdf_generated",
+                "verification_report_generated"
             )))
             markdown = result.output_markdown.read_text(encoding="utf-8")
             html = result.output_html.read_text(encoding="utf-8")

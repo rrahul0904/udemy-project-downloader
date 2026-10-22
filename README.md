@@ -122,7 +122,7 @@ signed-in Chrome/Safari/Firefox session in memory and writes files directly to
 the bind-mounted `downloads` directory. There is no cookie file to create,
 upload, or commit, and no browser credentials enter the Docker container.
 
-From the repository on the **Mac host**, not inside the container:
+From the repository on the **Mac host**, not inside the container, run the CLI directly:
 
 ```bash
 python3 -m venv .venv
@@ -150,8 +150,26 @@ PDF/HTML/JSON/Markdown files are available through the app's Files view.
 - Since it directly writes to `./downloads`, use the repo's own checkout
   location for both `docker compose` and this Mac command.
 
-This Mac helper is separate from server-side production deployments; a
-remote Render deployment cannot access your local Chrome/Safari profile.
+For a one-click UI workflow, start the loopback-only companion on the Mac host:
+
+```bash
+.venv/bin/python scripts/mac_practice_companion.py
+```
+
+In the local app at `http://127.0.0.1:8080`, paste the Udemy course or quiz URL,
+choose Chrome or Safari in **Mac Browser Export**, connect the helper, then click
+**Export Practice Exams**. The pairing token stays in this browser tab's session
+storage. The companion binds only to `127.0.0.1:8765`, accepts requests only
+from the local app origins, and requires both the pairing token and exact
+`Origin`. It returns export counts and file paths; browser session cookies stay
+in host process memory and are never sent to Docker or a remote server. Files
+are written directly to the repository's bind-mounted `downloads` directory.
+
+Each export includes a consolidated PDF, one PDF per exam, JSON, HTML, Markdown,
+and a `*-verification-report.md` with actual/expected counts and warnings. The
+UI's Files inventory updates when the export completes. Stop the companion with
+Ctrl-C when finished. A remote deployment cannot access a local Chrome/Safari
+profile and cannot use this companion.
 
 ## Production security boundary
 
