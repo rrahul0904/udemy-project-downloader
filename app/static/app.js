@@ -34,7 +34,7 @@ form.addEventListener("submit", async (event) => {
 
   try {
     const data = new FormData(form);
-    for (const name of ["subtitles", "auto_subtitles", "include_practice_tests", "confirm_authorized"]) {
+    for (const name of ["subtitles", "auto_subtitles", "include_practice_tests", "download_videos", "confirm_authorized"]) {
       data.set(name, form.elements[name].checked ? "true" : "false");
     }
 
