@@ -77,7 +77,10 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
         media = (root / rel_path).resolve()
         if not media.is_relative_to(root) or not media.is_file():
             raise HTTPException(status_code=404, detail="Local lesson video not found.")
-        return media, media.parent / f".visual-{lesson_id}"
+        output = media.parent / f".visual-{lesson_id}"
+        if not output.resolve().is_relative_to(root):
+            raise HTTPException(status_code=400, detail="Visual output path is outside the authorized library.")
+        return media, output
 
     async def process_visuals(job_id: str, media: Path, folder: Path, max_frames: int, model: str | None) -> None:
         visual_jobs[job_id]["status"] = "running"
@@ -96,6 +99,10 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
             raise HTTPException(status_code=400, detail="Video visuals require a supported video file.")
         if any(job.get("status") in {"queued", "running"} for job in visual_jobs.values()):
             raise HTTPException(status_code=429, detail="A visual analysis is already running.")
+        # Keep in-memory status bounded; finished artifacts remain on durable disk.
+        for old_id in list(visual_jobs)[:-100]:
+            if visual_jobs[old_id]["status"] not in {"queued", "running"}:
+                del visual_jobs[old_id]
         job_id = uuid.uuid4().hex
         visual_jobs[job_id] = {"id": job_id, "lesson_id": lesson_id, "status": "queued"}
         asyncio.create_task(process_visuals(job_id, media, folder, payload.max_frames, payload.vision_model))
