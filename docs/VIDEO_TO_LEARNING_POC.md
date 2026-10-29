@@ -1,5 +1,36 @@
 # Video-to-Learning POC — Waves 1–2
 
+## October 29: PyAV 19 decoder incompatibility fix
+
+The optional transcription worker built successfully on the Mac but failed while opening the downloaded CoCo video:
+
+    TypeError: open() got an unexpected keyword argument 'metadata_errors'
+
+The released faster-whisper 1.2.1 still passes metadata_errors to av.open, although PyAV 19 removed it.
+Upstream: https://github.com/SYSTRAN/faster-whisper/issues/1589
+
+requirements-asr.txt now pins av==18.1.0. The ASR Docker build now runs scripts/verify_asr_decoder.py
+against synthetic PCM WAV audio and CI includes a dedicated ASR worker build.
+
+On the same Mac and project directory:
+
+    git pull --ff-only
+    docker compose --profile transcribe build transcript-worker
+    docker compose --profile transcribe run --rm transcript-worker \
+      python scripts/video_to_learning_poc.py \
+      --url 'https://www.youtube.com/watch?v=fYgggzLEIFs' \
+      --asr-fallback --visuals
+
+This uses the already downloaded authorized MP4 and mounted downloads/data folders.
+Do not retry YouTube subtitles, remove the MP4, or clear persistent model caches.
+A valid Docker build should print decoder status ok with PyAV 18.1.0.
+
+Generated VTT and hidden learning-package files are beside the original MP4:
+
+    find ./downloads -type f \( -name '*fYgggzLEIFs*.en.vtt' -o -name 'quality-report.json' -o -name 'source-grounded-study-guide.md' \)
+
+The decoder smoke test is NOT real speech accuracy certification; examine the generated transcript.
+
 ## Real failure recovery: YouTube subtitles HTTP 429 (October 29, 2026)
 
 The user's original \`--url ... --visuals\` run failed with \`Unable to download video subtitles for 'en': HTTP Error 429\`. This is a YouTube rate limit, not a Docker build error. Do **not** repeatedly retry requests or try to circumvent YouTube controls. The converter now looks for already downloaded local media/captions before requesting YouTube. If the media exists and is captionless, it asks for local ASR rather than hitting the network. Remote 429 errors produce a structured \`status: blocked\` result instead of a traceback.
