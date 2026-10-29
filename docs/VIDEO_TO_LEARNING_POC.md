@@ -218,3 +218,25 @@ Alternatively, for an already downloaded authorized local MP4 without captions, 
     python scripts/video_to_learning_poc.py --video-file '/path/to/actual/downloaded/fYgggzLEIFs.mp4' --asr-fallback --visuals
 
 The local ASR route downloads an open ASR model on first run and remains unverified until its output is checked against the actual audio. Replace the example `--video-file` path with the real path printed by `find`. Report `transcribed_unverified` is only a partial success. The learning guide is a timestamped extractive outline, not a fully synthesized curriculum. All personal learning use remains subject to source authorization.
+
+## POC #1 verified on user's Mac — October 29, 2026
+
+The actual Snowflake CoCo local conversion succeeded after the PyAV dependency fix:
+- Status: transcribed_unverified (not editorially approved).
+- Speech: 179 timed segments, 2,247 words, 0 malformed timestamps, 0 duplicates.
+- Timeline: 844,000 ms reported audio timeline, 99.35% transcript segment coverage; 5,480 ms uncovered and no gaps longer than 30 seconds.
+- Visual: 48 sampled frames with OCR, preserving full timestamped manifest and code/slide/diagram candidates.
+- Database: one course and one lesson indexed.
+- Artifacts: .en.vtt adjacent to the original video; hidden .<video-stem>.en.learning/ contains study guide, quality-report.json and visuals/.
+
+**Timeline coverage is not transcript word accuracy, and 'frames_with_ocr_unverified' does not certify diagram or code accuracy.**
+Speech/visual cross-check was not performed. The present study guide is source-grounded excerpts, not fully synthesized teaching material.
+
+Course Intelligence web UI normally stores visuals under .visual-<lesson_id>. The CLI writes them inside its hidden .<video-stem>.<language>.learning/visuals folder. The lesson API now detects a saved visual manifest for the *matching media stem*, so the user can open the generated 48 frames in the browser without rerunning extraction. The web image needs rebuilding after pulling this change:
+
+    git pull --ff-only
+    docker compose up -d --build
+
+Then open http://127.0.0.1:8080/learn, select the indexed Snowflake CoCo lesson, and choose Visual Evidence.
+Transcript, visual notes and quality JSON are also stored locally under ./downloads. On macOS, hidden .learning directories
+can be revealed in Finder with Cmd+Shift+Period or browsed with a terminal command.
