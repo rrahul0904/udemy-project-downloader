@@ -193,6 +193,16 @@ def main(argv: list[str] | None = None) -> int:
         visual = analyze_video_visuals(media, visual_dir,
                                       max_frames=args.max_frames, vision_model=args.vision_model)
         result["visual"] = visual
+        guide_path = Path(result["artifacts"]["study_guide"])
+        visual_links = (
+            "\n## Visual evidence (unverified)\n\n"
+            "These frame samples are NOT exhaustive and may contain OCR errors.\n\n"
+            "- [Timestamped slides, code and diagrams](visuals/visual-study-notes.md)\n"
+            "- [On-screen code candidates](visuals/code-candidates.md)\n"
+            "- [Slide candidates](visuals/slide-candidates.md)\n"
+            "- [Diagram image candidates](visuals/diagram-candidates.md)\n"
+        )
+        guide_path.write_text(guide_path.read_text(encoding="utf-8") + visual_links, encoding="utf-8")
         result["quality"]["visual_analysis"] = visual["status"]
         Path(result["artifacts"]["quality_report"]).write_text(
             json.dumps(result["quality"], indent=2), encoding="utf-8"
