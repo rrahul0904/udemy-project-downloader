@@ -77,7 +77,20 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
         media = (root / rel_path).resolve()
         if not media.is_relative_to(root) or not media.is_file():
             raise HTTPException(status_code=404, detail="Local lesson video not found.")
+        # Browser analyses use .visual-{lesson_id}; CLI/worker analyses write
+        # beside the source transcript in .<video-stem>.<lang>.learning/visuals.
+        # Discover those same-media artifacts without scanning other lessons,
+        # downloading another video, or following paths outside the library.
         output = media.parent / f".visual-{lesson_id}"
+        if not (output / "visual-manifest.json").is_file():
+            prefix = f".{media.stem}."
+            for candidate in media.parent.iterdir():
+                if not candidate.name.startswith(prefix) or not candidate.name.endswith(".learning"):
+                    continue
+                visual_dir = candidate / "visuals"
+                if visual_dir.resolve().is_relative_to(root) and (visual_dir / "visual-manifest.json").is_file():
+                    output = visual_dir
+                    break
         if not output.resolve().is_relative_to(root):
             raise HTTPException(status_code=400, detail="Visual output path is outside the authorized library.")
         return media, output
