@@ -24,6 +24,10 @@ RUN if [ "$INSTALL_LOCAL_ASR" = "1" ]; then pip install --no-cache-dir -r requir
 
 COPY --chown=10001:10001 app ./app
 COPY --chown=10001:10001 scripts ./scripts
+
+# Check actual PyAV decode semantics at worker build time, without model download.
+RUN if [ "$INSTALL_LOCAL_ASR" = "1" ]; then python scripts/verify_asr_decoder.py; fi
+
 RUN mkdir -p /downloads /app/data \
     && chown -R 10001:10001 /downloads /app/data /app
 
