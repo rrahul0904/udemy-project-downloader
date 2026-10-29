@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
+import uuid
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from .database import CourseStore
@@ -14,6 +16,7 @@ from .media_sources import MediaSourceError, SOURCE_REGISTRY, detect_media_sourc
 from .study_service import StudyService
 from .study_store import ARTIFACT_KINDS, StudyStore
 from .transcript_export import SUPPORTED_EXPORT_FORMATS, export_transcript
+from .visual_learning import analyze_video_visuals
 
 
 class ProgressPayload(BaseModel):
@@ -23,6 +26,11 @@ class ProgressPayload(BaseModel):
 
 class ArtifactGeneratePayload(BaseModel):
     transcript_id: str | None = Field(default=None, max_length=64)
+
+
+class VisualAnalysisPayload(BaseModel):
+    max_frames: int = Field(default=36, ge=2, le=60)
+    vision_model: str | None = Field(default=None, max_length=80)
 
 
 class GroundedChatPayload(BaseModel):
@@ -55,6 +63,71 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["course-intelligence-v1"])
     study_store = StudyStore(store.path)
     study = StudyService(store, study_store)
+    visual_jobs: dict[str, dict[str, Any]] = {}
+
+    def visual_paths(lesson_id: str) -> tuple[Path, Path]:
+        try:
+            lesson = store.lesson(lesson_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Lesson not found.") from exc
+        rel_path = lesson.get("media_path")
+        if not rel_path:
+            raise HTTPException(status_code=409, detail="No downloaded video associated with this lesson. Archive authorized video media first.")
+        root = download_root.resolve()
+        media = (root / rel_path).resolve()
+        if not media.is_relative_to(root) or not media.is_file():
+            raise HTTPException(status_code=404, detail="Local lesson video not found.")
+        return media, media.parent / f".visual-{lesson_id}"
+
+    async def process_visuals(job_id: str, media: Path, folder: Path, max_frames: int, model: str | None) -> None:
+        visual_jobs[job_id]["status"] = "running"
+        try:
+            result = await asyncio.to_thread(
+                analyze_video_visuals, media, folder, max_frames=max_frames, vision_model=model
+            )
+            visual_jobs[job_id].update(status="complete", report=result)
+        except Exception as exc:
+            visual_jobs[job_id].update(status="failed", error=f"{type(exc).__name__}: {exc}"[:500])
+
+    @router.post("/lessons/{lesson_id}/visuals")
+    async def start_visuals(lesson_id: str, payload: VisualAnalysisPayload) -> dict[str, Any]:
+        media, folder = visual_paths(lesson_id)
+        if media.suffix.lower() not in {".mp4", ".mkv", ".webm", ".mov", ".m4v"}:
+            raise HTTPException(status_code=400, detail="Video visuals require a supported video file.")
+        if any(job.get("status") in {"queued", "running"} for job in visual_jobs.values()):
+            raise HTTPException(status_code=429, detail="A visual analysis is already running.")
+        job_id = uuid.uuid4().hex
+        visual_jobs[job_id] = {"id": job_id, "lesson_id": lesson_id, "status": "queued"}
+        asyncio.create_task(process_visuals(job_id, media, folder, payload.max_frames, payload.vision_model))
+        return visual_jobs[job_id].copy()
+
+    @router.get("/lessons/{lesson_id}/visuals")
+    async def get_visuals(lesson_id: str) -> dict[str, Any]:
+        _, folder = visual_paths(lesson_id)
+        active = next((job for job in reversed(list(visual_jobs.values()))
+                       if job["lesson_id"] == lesson_id and job["status"] in {"queued", "running"}), None)
+        if active:
+            return active.copy()
+        report = folder / "visual-manifest.json"
+        if report.is_file():
+            try:
+                manifest = await asyncio.to_thread(lambda: json.loads(report.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                raise HTTPException(status_code=500, detail="Saved visual manifest is unreadable.")
+            return manifest
+        latest = next((job for job in reversed(list(visual_jobs.values()))
+                       if job["lesson_id"] == lesson_id), None)
+        return latest.copy() if latest else {"status": "not_started", "items": []}
+
+    @router.get("/lessons/{lesson_id}/visuals/frame/{frame_name}")
+    async def visual_frame(lesson_id: str, frame_name: str) -> FileResponse:
+        _, folder = visual_paths(lesson_id)
+        if not re.fullmatch(r"(?:periodic|scene)-\d{4}\.jpg", frame_name):
+            raise HTTPException(status_code=404, detail="Frame not found.")
+        frame = folder / "frames" / frame_name
+        if not frame.is_file():
+            raise HTTPException(status_code=404, detail="Frame not found.")
+        return FileResponse(frame, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
     @router.get("/media-sources")
     async def media_sources() -> dict[str, Any]:
