@@ -54,3 +54,44 @@ This environment did not establish live access to the sample YouTube video; no r
 - **Wave 4:** Course/playlist processing with durable resumable jobs, reviewer UI, multi-language outputs, full coverage reports, and regression/production acceptance.
 
 Production is NOT certified by synthetic tests. All new features must preserve existing local-first, authorized-source, citation-first, single-repository policies.
+
+## Wave 2 implemented: timestamped visual evidence
+
+Use the existing Wave 1 script with the visual flag:
+
+    python scripts/video_to_learning_poc.py --url 'https://www.youtube.com/watch?v=fYgggzLEIFs&list=PLL_i-2mmiz0c' --visuals
+
+Or analyze an authorized local lecture and transcribe it:
+
+    pip install -r requirements-asr.txt
+    python scripts/video_to_learning_poc.py --video-file /path/to/lecture.mp4 --asr-fallback --visuals
+
+If you already have a transcript and video as separate local files:
+
+    python scripts/video_to_learning_poc.py --input /path/to/lecture.en.vtt --media /path/to/lecture.mp4 --visuals
+
+Install ffmpeg / ffprobe and Tesseract OCR on the host (for macOS, `brew install ffmpeg tesseract`).
+The Docker image also supplies ffmpeg and Tesseract, but the POC script runs on the host unless executed inside a configured container.
+
+A successful visual run produces a `visuals/` subfolder within the hidden learning package. It contains
+`frames/` JPEG images, `visual-manifest.json`, `visual-study-notes.md`, `code-candidates.md`,
+`slide-candidates.md`, and `diagram-candidates.md`. The manifest records sampling method, frame times,
+OCR text/confidence, SHA-256 image receipts and candidate classifications.
+
+Frame extraction samples the entire movie periodically (up to a frame budget) and opportunistically samples
+scene changes. It does NOT guarantee every slide, intermediate code edit, or diagram edge has been seen.
+Tesseract OCR can produce invalid code characters and cannot prove architectural arrow relationships.
+
+For optional diagram descriptions with a local-only Ollama multimodal model, first configure a local Ollama
+server at `127.0.0.1:11434`, install/pull a suitable vision model, then run:
+
+    python scripts/video_to_learning_poc.py --video-file /path/to/lecture.mp4 --asr-fallback --visuals --vision-model llava
+
+This local-model option is explicit and never uploads video frames to an external AI provider. Model-generated
+descriptions are tagged `unverified`, and failed model calls produce warnings. Reviewing the frame images
+and original media remains necessary before approving teaching material.
+
+**Proof status:** The visual extractor has local synthetic-video smoke coverage and tests for OCR, classification,
+review flags, image evidence and frame count bounds. Actual user-selected YouTube media has **not** been fetched
+or visually verified in this environment; real POC acceptance is still pending. All outputs should be treated
+as a pilot, not a certified complete course conversion.
