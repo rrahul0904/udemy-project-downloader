@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import sys
@@ -116,8 +117,8 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--input", type=Path, help="Local authorized VTT/SRT/JSON3/TXT/MD")
     src.add_argument("--video-file", type=Path, help="Authorized local lecture video: ASR and optional visual extraction")
     ap.add_argument("--source-url", default="")
-    ap.add_argument("--download-root", type=Path, default=REPO / "downloads")
-    ap.add_argument("--data-root", type=Path, default=REPO / "data")
+    ap.add_argument("--download-root", type=Path, default=Path(os.environ.get("DOWNLOAD_DIR", str(REPO / "downloads"))))
+    ap.add_argument("--data-root", type=Path, default=Path(os.environ.get("DATA_DIR", str(REPO / "data"))))
     ap.add_argument("--language", default="en")
     ap.add_argument("--asr-fallback", action="store_true")
     ap.add_argument("--asr-model", default="small")
