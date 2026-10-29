@@ -2,13 +2,13 @@
 
 No YouTube access, no Whisper model, and no FFmpeg are required.
 """
+import asyncio
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
 from app.api_v1 import build_api_v1
 from app.database import CourseStore
@@ -48,20 +48,20 @@ class VisualWorkerUiIntegrationTest(unittest.TestCase):
             library = store.sync_library(downloads)
             self.assertEqual(library["lesson_count"], 1)
             lesson_id = library["courses"][0]["lessons"][0]["id"]
-            app = FastAPI()
-            app.include_router(build_api_v1(store, downloads))
-            with TestClient(app) as client:
-                response = client.get(f"/api/v1/lessons/{lesson_id}/visuals")
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.json()["frames_examined"], 1)
-                self.assertEqual(response.json()["items"][0]["ocr"]["text"], "Snowflake cost intelligence")
-                response = client.get(f"/api/v1/lessons/{lesson_id}/visuals/frame/periodic-0001.jpg")
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.content, b"dummy-jpeg")
-                self.assertEqual(
-                    client.get(f"/api/v1/lessons/{lesson_id}/visuals/frame/secrets.txt").status_code,
-                    404,
-                )
+            router = build_api_v1(store, downloads)
+            get_visuals = next(r.endpoint for r in router.routes
+                               if r.path.endswith("/{lesson_id}/visuals") and "GET" in r.methods)
+            get_frame = next(r.endpoint for r in router.routes
+                             if r.path.endswith("/{lesson_id}/visuals/frame/{frame_name}"))
+            result = asyncio.run(get_visuals(lesson_id))
+            self.assertEqual(result["frames_examined"], 1)
+            self.assertEqual(result["items"][0]["ocr"]["text"], "Snowflake cost intelligence")
+            response = asyncio.run(get_frame(lesson_id, "periodic-0001.jpg"))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(Path(response.path).read_bytes(), b"dummy-jpeg")
+            with self.assertRaises(HTTPException) as ctx:
+                asyncio.run(get_frame(lesson_id, "secrets.txt"))
+            self.assertEqual(ctx.exception.status_code, 404)
 
     def test_does_not_expose_unrelated_learning_package(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -82,12 +82,11 @@ class VisualWorkerUiIntegrationTest(unittest.TestCase):
             store = CourseStore(root / "data" / "app.db")
             library = store.sync_library(downloads)
             lesson_id = library["courses"][0]["lessons"][0]["id"]
-            app = FastAPI()
-            app.include_router(build_api_v1(store, downloads))
-            with TestClient(app) as client:
-                response = client.get(f"/api/v1/lessons/{lesson_id}/visuals")
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.json()["status"], "not_started")
+            router = build_api_v1(store, downloads)
+            get_visuals = next(r.endpoint for r in router.routes
+                               if r.path.endswith("/{lesson_id}/visuals") and "GET" in r.methods)
+            result = asyncio.run(get_visuals(lesson_id))
+            self.assertEqual(result["status"], "not_started")
 
 
 if __name__ == "__main__":
