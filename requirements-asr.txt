@@ -1,2 +1,7 @@
-# Optional local speech recognition; not part of base Docker image.
+# Optional local CPU speech recognition; not part of the base web image.
+# faster-whisper 1.2.1 invokes av.open(metadata_errors="ignore");
+# PyAV 19 removed that parameter. Pin the tested compatible wheel
+# until a released faster-whisper version supports PyAV 19+.
+# Upstream: https://github.com/SYSTRAN/faster-whisper/issues/1589
 faster-whisper>=1.1,<2
+av==18.1.0
