@@ -17,6 +17,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Optional CPU speech-to-text image for the transcriber profile only.
+ARG INSTALL_LOCAL_ASR=0
+COPY requirements-asr.txt .
+RUN if [ "$INSTALL_LOCAL_ASR" = "1" ]; then pip install --no-cache-dir -r requirements-asr.txt; fi
+
 COPY --chown=10001:10001 app ./app
 COPY --chown=10001:10001 scripts ./scripts
 RUN mkdir -p /downloads /app/data \
