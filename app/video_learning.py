@@ -177,8 +177,18 @@ def transcribe_with_local_whisper(media_path: Path, *, model: str = "small", lan
     except ImportError as exc:
         raise RuntimeError("Install optional requirements-asr.txt for --asr-fallback") from exc
     model_engine = WhisperModel(model, device="cpu", compute_type="int8")
-    results, _ = model_engine.transcribe(str(path), language=language, vad_filter=True)
-    return [
-        {"start_ms": round(s.start * 1000), "end_ms": round(s.end * 1000), "text": s.text.strip()}
-        for s in results if s.text.strip()
-    ]
+    try:
+        results, _ = model_engine.transcribe(str(path), language=language, vad_filter=True)
+        return [
+            {"start_ms": round(s.start * 1000), "end_ms": round(s.end * 1000), "text": s.text.strip()}
+            for s in results if s.text.strip()
+        ]
+    except TypeError as exc:
+        if "metadata_errors" in str(exc):
+            raise RuntimeError(
+                "Speech decoder dependency mismatch: installed PyAV cannot accept "
+                "'metadata_errors' used by faster-whisper. Update to the pinned "
+                "requirements-asr.txt (av==18.1.0) and rebuild the transcript-worker "
+                "image before retrying. No transcript was created."
+            ) from exc
+        raise
