@@ -185,14 +185,14 @@ def analyze_video_visuals(
         raise ValueError("Video exceeds the 2 GiB POC safety cap")
     if max_frames < 2 or max_frames > 120:
         raise ValueError("max_frames must be between 2 and 120")
+    destination = Path(output_dir).resolve()
+    if destination == media.parent or destination in media.parents:
+        raise ValueError("Visual output must be a separate subdirectory")
     if not shutil.which("ffmpeg"):
         raise RuntimeError("ffmpeg is required for visual extraction")
     duration = _duration_seconds(media)
     if duration > 4 * 3600:
         raise ValueError("Video exceeds the four-hour POC limit")
-    destination = Path(output_dir).resolve()
-    if destination == media.parent or destination in media.parents:
-        raise ValueError("Visual output must be a separate subdirectory")
     frames = destination / "frames"
     frames.mkdir(parents=True, exist_ok=True)
     for glob in ("periodic-*.jpg", "scene-*.jpg"):
