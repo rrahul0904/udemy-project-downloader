@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/learn.css" />
   <link rel="stylesheet" href="/static/os.css" />
   <link rel="stylesheet" href="/static/learn-os.css" />
+  <link rel="stylesheet" href="/static/visual-learning.css" />
 </head>
 <body>
 <div class="ci-shell">
@@ -43,6 +44,7 @@
             <button class="tab" data-tab="ask-course" role="tab">Ask Course</button>
             <button class="tab" data-tab="notes" role="tab">My Notes</button>
             <button class="tab" data-tab="bookmarks" role="tab">Bookmarks</button>
+            <button class="tab" data-tab="visuals" role="tab">Visual Evidence</button>
             <button class="tab" data-tab="files" role="tab">Files</button>
           </div>
 
@@ -55,6 +57,7 @@
           <section id="tab-ask-course" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Ask Course</h3><p><span class="ci-badge cyan">COURSE_GROUNDED</span> Answers only from matching transcript evidence. No outside model knowledge is silently added.</p></div></div><form id="ask-course-form" class="ask-box"><input id="ask-course-input" type="search" maxlength="2000" placeholder="Where does this lesson explain…?" required /><button class="generate-button" type="submit">Find evidence</button></form><div id="ask-course-result" class="ask-result" aria-live="polite"></div></section>
           <section id="tab-notes" class="tab-panel" hidden><div class="ci-privacy" style="margin-bottom:12px"><span>●</span><div><strong>My Notes are private writing.</strong> Generated study material will never overwrite your personal notes.</div></div><textarea id="lesson-notes" rows="18" maxlength="262144" placeholder="Write your own notes, key takeaways, questions, or study plan…"></textarea><div class="note-actions"><button id="save-notes" type="button">Save notes</button><span id="note-status" class="muted" role="status"></span></div></section>
           <section id="tab-bookmarks" class="tab-panel" hidden><p class="muted">Bookmarks are durable source anchors. Select one to return to the matching transcript timestamp.</p><div id="bookmark-list" class="bookmark-list"></div></section>
+          <section id="tab-visuals" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Video slides, code and diagrams</h3><p>Extract timestamped frames and OCR from locally archived video. All results require visual review.</p></div><button id="visual-analyze" class="generate-button" type="button">Analyze lesson video</button></div><p id="visual-status" class="muted" role="status">Select a lesson containing a downloaded video.</p><div id="visual-evidence" class="visual-evidence"><div class="ci-empty">No visual evidence generated.</div></div></section>
           <section id="tab-files" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Lesson and course files</h3><p>Open downloaded materials or hand them to Study Lab when the file type is compatible.</p></div><a class="ci-button-secondary" href="/lab" style="text-decoration:none">Open Study Lab</a></div><div id="lesson-files" class="files-list"><div class="ci-empty">No indexed attachments for this lesson/course.</div></div></section>
         </div>
       </section>
@@ -65,5 +68,6 @@
 <script src="/static/learn.js" type="module"></script>
 <script src="/static/learn-viewer-link.js" type="module"></script>
 <script src="/static/learn-study.js" type="module"></script>
+<script src="/static/learn-visuals.js" type="module"></script>
 </body>
 </html>
