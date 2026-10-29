@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DATA_DIR=/app/data
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates ffmpeg \
+    && apt-get install -y --no-install-recommends ca-certificates ffmpeg tesseract-ocr \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin app
@@ -18,6 +18,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=10001:10001 app ./app
+COPY --chown=10001:10001 scripts ./scripts
 RUN mkdir -p /downloads /app/data \
     && chown -R 10001:10001 /downloads /app/data /app
 
