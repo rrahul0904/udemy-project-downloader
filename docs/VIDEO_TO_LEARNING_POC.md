@@ -95,3 +95,30 @@ and original media remains necessary before approving teaching material.
 review flags, image evidence and frame count bounds. Actual user-selected YouTube media has **not** been fetched
 or visually verified in this environment; real POC acceptance is still pending. All outputs should be treated
 as a pilot, not a certified complete course conversion.
+
+## Course Intelligence UI integration (Visual Evidence tab)
+
+After an authorized downloaded video has been indexed as a lesson, open
+`/learn`, choose that lesson, select **Visual Evidence**, then click **Analyze lesson video**.
+
+The authenticated API now supports:
+
+- `POST /api/v1/lessons/{lesson_id}/visuals` with `{"max_frames":36}` to create a bounded background job.
+- `GET /api/v1/lessons/{lesson_id}/visuals` for queued/running status or the saved manifest.
+- `GET /api/v1/lessons/{lesson_id}/visuals/frame/{frame_name}` for a guarded JPEG preview.
+
+Only an already indexed local video associated with the selected lesson is accepted.
+The analyzer does not fetch arbitrary URLs from API requests. Existing production authentication
+and same-origin protections remain in force. A single visual analysis runs at a time.
+Frames and manifest remain on the persistent download volume; the transient in-memory job state
+does not survive a service restart and should not be mistaken for a fully durable queue.
+
+The UI displays original frame evidence and marks OCR and model descriptions unverified.
+Playback seeks use the closest sampled timestamps, not frame-accurate audit claims.
+
+## Remaining acceptance requirements
+
+- The specific provided YouTube video's visual content is not verified without running on a host that can access it.
+- Classification is heuristic: some code screenshots and diagrams will be unclassified.
+- OCR cannot reconstruct error-free code automatically; diagrams require source-image review.
+- Production release requires browser/user acceptance and full CI. Do not automatically merge this draft.
