@@ -89,17 +89,42 @@ def local_asr(url: str, folder: Path, video_id: str, language: str, model: str) 
     return dest
 
 
+def download_video_for_visuals(url: str, folder: Path, video_id: str) -> Path:
+    """Download a single normally accessible item, for opt-in visual processing."""
+    from yt_dlp import YoutubeDL
+    options = {
+        "noplaylist": True,
+        "format": "best[height<=720][ext=mp4]/best[height<=720]/best",
+        "outtmpl": str(folder / "%(id)s.%(ext)s"),
+        "max_filesize": 2 * 1024 ** 3,
+        "quiet": True,
+    }
+    with YoutubeDL(options) as ydl:
+        info = ydl.extract_info(url, download=True)
+        if not isinstance(info, dict) or str(info.get("id")) != video_id:
+            raise RuntimeError("Visual download did not match the requested video ID.")
+        path = Path(ydl.prepare_filename(info))
+    if not path.is_file() or path.stat().st_size > 2 * 1024 ** 3:
+        raise RuntimeError("Visual video download missing or over the 2 GiB safety limit.")
+    return path
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Evidence-first video-to-learning pilot")
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--url", help="Single YouTube URL; playlist query intentionally ignored")
     src.add_argument("--input", type=Path, help="Local authorized VTT/SRT/JSON3/TXT/MD")
+    src.add_argument("--video-file", type=Path, help="Authorized local lecture video: ASR and optional visual extraction")
     ap.add_argument("--source-url", default="")
     ap.add_argument("--download-root", type=Path, default=REPO / "downloads")
     ap.add_argument("--data-root", type=Path, default=REPO / "data")
     ap.add_argument("--language", default="en")
     ap.add_argument("--asr-fallback", action="store_true")
     ap.add_argument("--asr-model", default="small")
+    ap.add_argument("--visuals", action="store_true", help="Extract slides, on-screen code and diagrams as timestamped visual evidence")
+    ap.add_argument("--media", type=Path, help="Existing authorized local video for --url/--input visual analysis")
+    ap.add_argument("--max-frames", type=int, default=48, help="Visual frame budget 2..120")
+    ap.add_argument("--vision-model", default=None, help="Opt-in LOCAL Ollama vision model; descriptions need review")
     ap.add_argument("--duration-seconds", type=float, default=None)
     ap.add_argument("--no-index", action="store_true")
     args = ap.parse_args(argv)
@@ -107,7 +132,26 @@ def main(argv: list[str] | None = None) -> int:
         ap.error("Invalid --language.")
     root = args.download_root.resolve()
     root.mkdir(parents=True, exist_ok=True)
-    if args.input:
+    if args.video_file:
+        if not args.asr_fallback:
+            ap.error("--video-file needs --asr-fallback (install requirements-asr.txt)")
+        from app.visual_learning import _duration_seconds, VIDEO_SUFFIXES
+        media = args.video_file.resolve()
+        if not media.is_file() or media.suffix.lower() not in VIDEO_SUFFIXES:
+            ap.error("--video-file needs an existing supported local video.")
+        name = re.sub(r"[^A-Za-z0-9_-]+", "-", media.stem)[:60]
+        folder = root / "VideoToLearningPOC" / ("local-video-" + name)
+        folder.mkdir(parents=True, exist_ok=True)
+        segments = transcribe_with_local_whisper(media, model=args.asr_model, language=args.language)
+        if not segments:
+            print(json.dumps({"status":"blocked","reason":"Local speech recognition returned no segments."}))
+            return 2
+        caption, _, _ = export_transcript({"segments": segments}, "vtt")
+        path = folder / ("local-video-" + name + "." + args.language + ".vtt")
+        path.write_text(caption, encoding="utf-8")
+        title, url = media.stem, args.source_url
+        duration = round(_duration_seconds(media) * 1000)
+    elif args.input:
         existing = args.input.resolve()
         if not existing.is_file() or existing.suffix.lower() not in {".vtt", ".srt", ".json3", ".txt", ".md"}:
             ap.error("--input requires an existing supported transcript.")
@@ -134,7 +178,25 @@ def main(argv: list[str] | None = None) -> int:
         if path is None:
             print(json.dumps({"status": "blocked", "video_id": video_id, "reason": "No accessible captions. Optional local ASR requires --asr-fallback."}, indent=2))
             return 2
+    if args.vision_model and not (args.visuals or args.video_file):
+        ap.error("--vision-model requires --visuals or --video-file")
     result = export_learning_package(path, title=title, source_url=url, duration_ms=duration)
+    if args.visuals or args.video_file:
+        from app.visual_learning import VIDEO_SUFFIXES, analyze_video_visuals
+        media = args.video_file.resolve() if args.video_file else args.media.resolve() if args.media else None
+        if media is None and args.url:
+            # Only fetch normally accessible, authorized video from the exact requested item.
+            media = download_video_for_visuals(url, folder, video_id)
+        if media is None or not media.is_file() or media.suffix.lower() not in VIDEO_SUFFIXES:
+            raise RuntimeError("Visual extraction needs a valid local --media/--video-file or accessible YouTube video.")
+        visual_dir = Path(result["artifacts"]["quality_report"]).parent / "visuals"
+        visual = analyze_video_visuals(media, visual_dir,
+                                      max_frames=args.max_frames, vision_model=args.vision_model)
+        result["visual"] = visual
+        result["quality"]["visual_analysis"] = visual["status"]
+        Path(result["artifacts"]["quality_report"]).write_text(
+            json.dumps(result["quality"], indent=2), encoding="utf-8"
+        )
     if not result["quality"]["word_count"]:
         print(json.dumps({"status": "blocked", "reason": "Zero usable transcript words.", **result}, indent=2))
         return 2
