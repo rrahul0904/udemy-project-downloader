@@ -51,6 +51,72 @@ def find_caption(directory: Path, video_id: str, language: str) -> Path | None:
     return sorted(files, key=priority)[0]
 
 
+def find_downloaded_media(root: Path, video_id: str) -> Path | None:
+    """Find an authorized video already stored in the mounted download library."""
+    extensions = {".mp4", ".mkv", ".webm", ".mov", ".m4v"}
+    candidates = (
+        item for item in root.rglob("*")
+        if item.is_file() and item.suffix.lower() in extensions
+        and video_id in item.name
+        and not any(part.startswith(".") for part in item.relative_to(root).parts)
+    )
+    return next(candidates, None)
+
+
+def find_downloaded_caption(root: Path, video_id: str, language: str) -> Path | None:
+    extensions = {".vtt", ".srt", ".json3"}
+    files = [
+        item for item in root.rglob("*")
+        if item.is_file() and item.suffix.lower() in extensions
+        and video_id in item.name
+        and not any(part.startswith(".") for part in item.relative_to(root).parts)
+    ]
+    if not files:
+        return None
+
+    def priority(item: Path) -> tuple[int, int, str]:
+        lang = item.name.lower()
+        exact = f".{language.lower()}."
+        score = 0 if exact in lang else 1 if ".en." in lang else 2
+        return score, {".vtt": 0, ".srt": 1, ".json3": 2}[item.suffix.lower()], str(item)
+
+    return sorted(files, key=priority)[0]
+
+
+def downloaded_video_info(media: Path, video_id: str) -> dict:
+    candidates = [media.with_suffix(".info.json")] + list(media.parent.glob(f"*{video_id}*.info.json"))
+    for item in candidates:
+        try:
+            if item.is_file():
+                info = json.loads(item.read_text(encoding="utf-8"))
+                if isinstance(info, dict) and str(info.get("id")) == video_id:
+                    return info
+        except (OSError, ValueError):
+            continue
+    return {}
+
+
+def save_asr_caption(media: Path, output: Path, language: str, model: str) -> Path | None:
+    """Transcribe existing media locally; do not retry YouTube or circumvent 429."""
+    segments = transcribe_with_local_whisper(media, model=model, language=language)
+    if not segments:
+        return None
+    body, _, _ = export_transcript({"segments": segments}, "vtt")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(body, encoding="utf-8")
+    return output
+
+
+def blocked(video_id: str, reason: str, *, local_media: Path | None = None) -> int:
+    print(json.dumps({
+        "status": "blocked", "video_id": video_id, "reason": reason,
+        "existing_video": str(local_media) if local_media else None,
+        "suggestion": "Use an authorized already-downloaded MP4 with --asr-fallback. "
+                      "The optional transcript-worker Docker profile installs local speech recognition."
+    }, indent=2))
+    return 2
+
+
 def download_caption(url: str, target: Path, video_id: str, language: str) -> dict:
     try:
         from yt_dlp import YoutubeDL
@@ -170,21 +236,61 @@ def main(argv: list[str] | None = None) -> int:
             ap.error(str(exc))
         folder = root / "VideoToLearningPOC" / video_id
         folder.mkdir(parents=True, exist_ok=True)
-        info = download_caption(url, folder, video_id, args.language)
-        path = find_caption(folder, video_id, args.language)
-        title = str(info.get("title") or video_id)
+        from app.visual_learning import _duration_seconds
+        local_media = args.media.resolve() if args.media else find_downloaded_media(root, video_id)
+        if args.media and (not local_media.is_file() or video_id not in local_media.name):
+            ap.error("--media must be an existing video matching the YouTube ID.")
+        existing_caption = find_downloaded_caption(root, video_id, args.language)
+        path = existing_caption
+        info = downloaded_video_info(local_media, video_id) if local_media else {}
+        title = str(info.get("title") or (local_media.stem if local_media else video_id))
         duration = round(float(info["duration"]) * 1000) if info.get("duration") else None
-        if path is None and args.asr_fallback:
-            path = local_asr(url, folder, video_id, args.language, args.asr_model)
+
+        if path is None and local_media and args.asr_fallback:
+            try:
+                path = save_asr_caption(
+                    local_media, local_media.parent / f"{local_media.stem}.{args.language}.vtt",
+                    args.language, args.asr_model,
+                )
+            except RuntimeError as exc:
+                return blocked(video_id, str(exc), local_media=local_media)
+        elif path is None and local_media:
+            return blocked(
+                video_id,
+                "Downloaded video exists but contains no indexed subtitle file. "
+                "Local speech recognition has not been enabled; pass --asr-fallback.",
+                local_media=local_media,
+            )
+
+        if path is None and not local_media:
+            try:
+                from yt_dlp.utils import DownloadError
+                info = download_caption(url, folder, video_id, args.language)
+            except DownloadError as exc:
+                reason = str(exc)
+                if "429" in reason or "Too Many Requests" in reason:
+                    reason = "YouTube returned HTTP 429 for captions. Do not repeatedly retry; "
+                    reason += "use a previously downloaded MP4 and local speech recognition."
+                return blocked(video_id, reason)
+            title = str(info.get("title") or video_id)
+            duration = round(float(info["duration"]) * 1000) if info.get("duration") else None
+            path = find_caption(folder, video_id, args.language)
+            if path is None and args.asr_fallback:
+                try:
+                    path = local_asr(url, folder, video_id, args.language, args.asr_model)
+                except RuntimeError as exc:
+                    return blocked(video_id, str(exc))
+
         if path is None:
-            print(json.dumps({"status": "blocked", "video_id": video_id, "reason": "No accessible captions. Optional local ASR requires --asr-fallback."}, indent=2))
-            return 2
+            return blocked(video_id, "No usable captions or local ASR transcript recovered.", local_media=local_media)
+        if local_media and duration is None:
+            duration = round(_duration_seconds(local_media) * 1000)
     if args.vision_model and not (args.visuals or args.video_file):
         ap.error("--vision-model requires --visuals or --video-file")
     result = export_learning_package(path, title=title, source_url=url, duration_ms=duration)
     if args.visuals or args.video_file:
         from app.visual_learning import VIDEO_SUFFIXES, analyze_video_visuals
-        media = args.video_file.resolve() if args.video_file else args.media.resolve() if args.media else None
+        media = args.video_file.resolve() if args.video_file else args.media.resolve() if args.media else local_media if args.url else None
         if media is None and args.url:
             # Only fetch normally accessible, authorized video from the exact requested item.
             media = download_video_for_visuals(url, folder, video_id)
