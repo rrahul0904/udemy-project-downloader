@@ -122,3 +122,30 @@ Playback seeks use the closest sampled timestamps, not frame-accurate audit clai
 - Classification is heuristic: some code screenshots and diagrams will be unclassified.
 - OCR cannot reconstruct error-free code automatically; diagrams require source-image review.
 - Production release requires browser/user acceptance and full CI. Do not automatically merge this draft.
+
+## Actual user pilot evidence — October 29, 2026
+
+The uploaded `fYgggzLEIFs` media was independently inspected (not automatically executed in the web app): 844.161 seconds, 1920x1080 AV1 video with Opus stereo audio. Its YouTube `.info.json` advertises English automatically generated captions and five chapters; the supplied files have **no VTT/SRT/JSON3 caption files**. This is therefore downloaded media, not a proven transcript or completed course conversion.
+
+Existing `--url ... --visuals` tries captions first; an optional local ASR must be explicitly enabled for a captionless source. The base Docker image does not install faster-whisper and therefore is not an automatic captionless-transcription runtime. Do not tell users otherwise. Passing the URL alone to the ordinary downloader does NOT automatically generate the video-to-learning package.
+
+The CLI defaults now honor the Docker runtime mounts `DOWNLOAD_DIR=/downloads` and `DATA_DIR=/app/data`; previous hardcoded repository-relative defaults were not durable in the Docker image.
+
+The uploaded lecture's actual sampled frames include the six-step CoCo workflow (01:35), the Snowflake Cost Management and chat interfaces, the HTML report (09:25), visible HTML code (10:25), and illustrative anomaly detection (13:20). Samples are preliminary evidence and **do not verify the audio transcript**, exact code, completeness of the presentation, or factual applicability of displayed metrics.
+
+From the CURRENT project root on a Mac, test caption-first conversion inside the rebuilt container:
+
+    git pull --ff-only
+    docker compose up -d --build
+    docker compose exec course-intelligence python scripts/video_to_learning_poc.py --url 'https://www.youtube.com/watch?v=fYgggzLEIFs' --visuals
+
+Alternatively, for an already downloaded authorized local MP4 without captions, use the optional ASR dependencies on the Mac host:
+
+    brew install ffmpeg tesseract
+    python3 -m venv .venv
+    . .venv/bin/activate
+    pip install -r requirements.txt -r requirements-asr.txt
+    find downloads -type f -name '*fYgggzLEIFs*.mp4'
+    python scripts/video_to_learning_poc.py --video-file '/path/to/actual/downloaded/fYgggzLEIFs.mp4' --asr-fallback --visuals
+
+The local ASR route downloads an open ASR model on first run and remains unverified until its output is checked against the actual audio. Replace the example `--video-file` path with the real path printed by `find`. Report `transcribed_unverified` is only a partial success. The learning guide is a timestamped extractive outline, not a fully synthesized curriculum. All personal learning use remains subject to source authorization.
