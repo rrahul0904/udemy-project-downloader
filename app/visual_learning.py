@@ -136,7 +136,7 @@ def _scene_frames(media: Path, frames: Path, limit: int) -> list[dict[str, Any]]
         return []
     args = ["ffmpeg", "-hide_banner", "-loglevel", "info", "-nostdin", "-y",
             "-i", str(media), "-vf",
-            r"select=gt(scene\,0.36),showinfo,scale=1280:-2",
+            r"select=gt(scene\,0.02),showinfo,scale=1280:-2",
             "-vsync", "vfr", "-q:v", "3", "-frames:v", str(limit),
             str(frames / "scene-%04d.jpg")]
     try:
