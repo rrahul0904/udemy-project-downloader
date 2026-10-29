@@ -1,4 +1,42 @@
-# Video-to-Learning POC — Wave 1
+# Video-to-Learning POC — Waves 1–2
+
+## Real failure recovery: YouTube subtitles HTTP 429 (October 29, 2026)
+
+The user's original \`--url ... --visuals\` run failed with \`Unable to download video subtitles for 'en': HTTP Error 429\`. This is a YouTube rate limit, not a Docker build error. Do **not** repeatedly retry requests or try to circumvent YouTube controls. The converter now looks for already downloaded local media/captions before requesting YouTube. If the media exists and is captionless, it asks for local ASR rather than hitting the network. Remote 429 errors produce a structured \`status: blocked\` result instead of a traceback.
+
+To process the existing Snowflake video using the on-demand ASR Docker worker:
+
+    # From the root of the cloned repository on the Mac
+    git pull --ff-only
+    find ./downloads -type f -iname '*fYgggzLEIFs*.mp4'
+
+    # If no file appears, copy the previously downloaded authorized MP4
+    # into this repository's ./downloads/ folder before continuing.
+    docker compose --profile transcribe build transcript-worker
+    docker compose --profile transcribe run --rm transcript-worker \
+       python scripts/video_to_learning_poc.py \
+       --url 'https://www.youtube.com/watch?v=fYgggzLEIFs' \
+       --asr-fallback --visuals
+
+The existing web service stays active; the optional worker installs \`faster-whisper\` in a separate CPU-only Docker image, and stores downloaded speech model weights in \`./data/.cache/huggingface\` on the Mac via the mounted \`/app/data\` volume. First-run model retrieval requires access to its model registry; no YouTube caption requests are made when an authorized matching MP4 is already mounted.
+
+Results go under the same \`./downloads\` tree as the original MP4: \`<original_video_stem>.en.vtt\` plus a hidden \`.<original_video_stem>.en.learning\` directory containing the transcript and source-linked visual evidence. The original MP4 is preserved. Inspect \`quality-report.json\`; this is an **unverified** draft transcript, not guaranteed accurate teaching content.
+
+If the transcriber Docker image fails to build for the Mac's CPU architecture, the same local speech recognition command can be run on the Mac host instead:
+
+    brew install ffmpeg tesseract
+    python3 -m venv .venv
+    . .venv/bin/activate
+    python -m pip install -r requirements.txt -r requirements-asr.txt
+    find ./downloads -type f -iname '*fYgggzLEIFs*.mp4'
+
+    # Replace the path with one printed by find, preserving quote marks.
+    python scripts/video_to_learning_poc.py \
+       --video-file '/actual/path/to/video [fYgggzLEIFs].mp4' \
+       --asr-fallback --visuals
+
+The separate \`transcript-worker\` service does not run during ordinary \`docker compose up\`. No external speech-recognition provider is used. A model download is needed the first time unless a usable copy was already cached.
+
 
 ## User-selected pilot
 
