@@ -19,3 +19,25 @@ services:
       - ./downloads:/downloads
       - ./data:/app/data
     restart: unless-stopped
+
+  # On-demand worker: uses the same bound downloads/data as the web app.
+  # Does not start during docker compose up (profile-gated).
+  transcript-worker:
+    profiles: ["transcribe"]
+    build:
+      context: .
+      args:
+        INSTALL_LOCAL_ASR: "1"
+    image: udemy-project-downloader-transcriber:local
+    init: true
+    environment:
+      APP_ENV: development
+      DOWNLOAD_DIR: /downloads
+      DATA_DIR: /app/data
+      HF_HOME: /app/data/.cache/huggingface
+      XDG_CACHE_HOME: /app/data/.cache
+    volumes:
+      - ./downloads:/downloads
+      - ./data:/app/data
+    restart: "no"
+    command: ["python", "scripts/video_to_learning_poc.py", "--help"]
