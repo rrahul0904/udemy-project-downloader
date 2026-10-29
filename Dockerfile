@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DATA_DIR=/app/data
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates ffmpeg tesseract-ocr \
+    && apt-get install -y --no-install-recommends ca-certificates ffmpeg tesseract-ocr libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin app
