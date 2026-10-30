@@ -153,6 +153,29 @@ class IntelligentLearningTests(unittest.TestCase):
             generate_learning_guide(transcript(), manifest(), model="qwen2.5:7b",
                                     generator=lambda *_: made_up)
 
+    def test_long_video_requires_later_chapter_evidence(self):
+        long_source = transcript()
+        for i, segment in enumerate(long_source["segments"]):
+            segment["start_ms"] = i * 60000
+            segment["end_ms"] = (i + 1) * 60000
+        with self.assertRaisesRegex(LearningGuideError, "lecture timeline"):
+            generate_learning_guide(long_source, manifest(), model="qwen2.5:7b",
+                                    generator=lambda *_: model_output())
+
+    def test_retries_once_when_first_answer_is_shallow(self):
+        attempts = []
+        def generate(prompt, model):
+            attempts.append(prompt)
+            answer = model_output()
+            if len(attempts) == 1:
+                answer["chapters"] = []
+            return answer
+        result = generate_learning_guide(transcript(), manifest(), model="qwen2.5:7b",
+                                         generator=generate)
+        self.assertEqual(len(attempts), 2)
+        self.assertIn("failed mandatory educational quality validation", attempts[1])
+        self.assertEqual(len(result["chapters"]), 3)
+
     def test_fails_clearly_if_model_is_not_configured(self):
         with patch.dict("os.environ", {"CI_LEARNING_MODEL": ""}):
             with self.assertRaisesRegex(LearningGuideError, "not configured"):
