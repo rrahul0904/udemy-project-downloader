@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/os.css" />
   <link rel="stylesheet" href="/static/learn-os.css" />
   <link rel="stylesheet" href="/static/visual-learning.css" />
+  <link rel="stylesheet" href="/static/learning-guide.css" />
 </head>
 <body>
 <div class="ci-shell">
@@ -36,6 +37,7 @@
           <div class="lesson-meta" id="lesson-meta"></div>
           <div class="tabbar" role="tablist" aria-label="Lesson workspace">
             <button class="tab active" data-tab="overview" role="tab">Overview</button>
+            <button class="tab" data-tab="learning-guide" role="tab">Learn This Video</button>
             <button class="tab" data-tab="transcript" role="tab">Transcript</button>
             <button class="tab" data-tab="ai-notes" role="tab">AI Notes</button>
             <button class="tab" data-tab="flashcards" role="tab">Flashcards</button>
@@ -49,6 +51,7 @@
           </div>
 
           <section id="tab-overview" class="tab-panel"><div id="lesson-overview" class="artifact-grid"><div class="ci-empty">Lesson overview will appear here.</div></div></section>
+          <section id="tab-learning-guide" class="tab-panel" hidden><div class="study-panel-head"><div><h3>What you learned — complete instructional lesson</h3><p>Actual explanations, workflows, worked examples, visual evidence, practice answers and exact lecture citations. Generated with a configured local AI model; always review before relying on it.</p></div><button id="learning-guide-generate" class="generate-button" type="button">Generate full learning material</button></div><p id="learning-guide-status" class="muted" role="status" aria-live="polite">Choose a lesson to generate a substantive study guide.</p><div id="learning-guide-content" class="learning-guide"><div class="ci-empty">No complete instructional lesson has been generated yet. Transcript excerpts are not a finished course.</div></div></section>
           <section id="tab-transcript" class="tab-panel" hidden><div class="transcript-toolbar"><label class="search grow"><span class="ci-sr-only">Search transcript</span><input id="transcript-search" type="search" placeholder="Search this transcript…" /></label><span id="search-count" class="muted"></span></div><div id="transcript" class="transcript"></div></section>
           <section id="tab-ai-notes" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Source-grounded study notes</h3><p>Generated locally from transcript segments. Every bullet includes lecture evidence.</p></div><button class="generate-button" data-generate="notes" type="button">Generate notes</button></div><div id="ai-notes-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No generated notes yet.</div></div></section>
           <section id="tab-flashcards" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Flashcards</h3><p>Questions and answers are derived from cited source segments.</p></div><button class="generate-button" data-generate="flashcards" type="button">Generate cards</button></div><div id="flashcards-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No flashcard deck yet.</div></div></section>
@@ -69,5 +72,6 @@
 <script src="/static/learn-viewer-link.js" type="module"></script>
 <script src="/static/learn-study.js" type="module"></script>
 <script src="/static/learn-visuals.js" type="module"></script>
+<script src="/static/learn-learning-guide.js" type="module"></script>
 </body>
 </html>
