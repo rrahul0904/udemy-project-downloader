@@ -100,6 +100,16 @@ test('course intelligence persists personal notes and bookmarks and keeps ground
   await expect(page.locator('#bookmark-list')).toContainText('SQLite FTS5');
 });
 
+test('full learning tab rejects extractive-only generation when AI model is not configured', async ({ page }) => {
+  await page.goto('/learn');
+  await page.getByRole('button', { name: /Introduction/ }).first().click();
+  await page.getByRole('tab', { name: 'Learn This Video', exact: true }).click();
+  await expect(page.locator('#learning-guide-content')).toContainText('No complete instructional lesson');
+  await page.getByRole('button', { name: 'Generate full learning material' }).click();
+  await expect(page.locator('#learning-guide-status')).toContainText('Configure CI_LEARNING_MODEL');
+  await expect(page.locator('#learning-guide-content')).not.toContainText('Topic 1');
+});
+
 test('synchronized viewer exposes sources exports bookmarks deep links and durable progress', async ({ page }) => {
   const response = await page.request.get('/api/v1/courses');
   expect(response.ok()).toBeTruthy();
