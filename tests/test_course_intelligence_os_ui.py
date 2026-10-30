@@ -46,7 +46,8 @@ class CourseIntelligenceOSUITests(unittest.TestCase):
     def test_learn_surface_contains_complete_grounded_workspace_tabs(self):
         learn = self.read("learn.html")
         for tab in (
-            "Overview", "Transcript", "AI Notes", "Flashcards", "Quiz", "Concept Map",
+            "Overview", "Transcript", "Learn This Video", "Transcript Excerpts",
+            "Flashcards", "Quiz", "Concept Map",
             "Ask Course", "My Notes", "Bookmarks", "Files",
         ):
             self.assertIn(f">{tab}<", learn)
