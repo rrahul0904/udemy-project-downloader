@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -163,6 +164,15 @@ def main(argv: list[str] | None = None) -> int:
             media = args.media.resolve()
             if media.suffix.lower() not in MEDIA_SUFFIXES or not media.is_file() or media.stat().st_size > MAX_MEDIA_BYTES:
                 raise IntakeError("--media must point to an existing authorized video no larger than 2 GiB.")
+            # Keep the source and transcript together in the indexed downloads
+            # folder. Never alter or delete the original authorized local file.
+            if media.parent != folder.resolve():
+                destination = folder / media.name
+                if destination.exists() and destination.stat().st_size != media.stat().st_size:
+                    raise IntakeError("A different video already occupies the local POC destination.")
+                if not destination.exists():
+                    shutil.copy2(media, destination)
+                media = destination
             metadata = {
                 "status": "local_media_source_url_unverified",
                 "requested_url": url, "resolved_url": None,
