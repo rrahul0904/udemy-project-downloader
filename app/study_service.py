@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
+
+from .intelligent_learning import generate_learning_guide, learning_model, load_visual_evidence
 
 from .database import CourseStore
 from .providers import ExtractiveGenerationProvider, GenerationProvider
@@ -15,10 +18,12 @@ class StudyService:
         course_store: CourseStore,
         study_store: StudyStore,
         provider: GenerationProvider | None = None,
+        download_root: Path | None = None,
     ):
         self.course_store = course_store
         self.study_store = study_store
         self.provider = provider or ExtractiveGenerationProvider()
+        self.download_root = Path(download_root) if download_root is not None else None
 
     def generate(self, lesson_id: str, kind: str, transcript_id: str | None = None) -> dict[str, Any]:
         if kind not in ARTIFACT_KINDS:
@@ -31,6 +36,16 @@ class StudyService:
         if not any(item["id"] == selected for item in variants):
             raise ValueError("Transcript does not belong to this lesson.")
         transcript = self.course_store.transcript(selected)
+        if kind == "learning_guide":
+            model = learning_model()
+            content = generate_learning_guide(
+                transcript, load_visual_evidence(self.download_root, lesson), model=model
+            )
+            return self.study_store.save_artifact(
+                lesson_id=lesson_id, course_id=lesson["course_id"],
+                kind=kind, transcript_id=selected, provider="local-ollama-instructional",
+                model=model, content=content,
+            )
         if kind == "summary":
             notes = self.provider.notes(transcript)
             content = {
