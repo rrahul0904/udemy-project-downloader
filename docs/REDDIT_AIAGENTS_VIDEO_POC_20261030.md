@@ -46,3 +46,21 @@ instructional chapters and worked exercises.
 
 The 'source-intake.json' manifest captures whether the initial Reddit source
 was actually resolved. Metadata-only intake does not create invented notes.
+## Actual source preflight evidence (Oct 30, 2026)
+
+The exact user-provided share URL was tested in metadata-only mode on a GitHub Actions runner.
+yt-dlp returned HTTP 403 Blocked for the generic shortlink endpoint; no actual video metadata
+could be recovered. This does not prove that the original Reddit post is deleted.
+
+Job: https://github.com/rrahul0904/udemy-project-downloader/actions/runs/41133699658
+Result artifact: https://github.com/rrahul0904/udemy-project-downloader/actions/runs/41133699658/artifacts/13013902700
+
+Reported status: blocked, source URL unchanged; no media, speech transcript, screenshots,
+or learning-guide content were generated for this Reddit URL.
+
+The one-time preflight job was removed from the normal CI workflow afterward
+to avoid repeatedly requesting a platform that returned HTTP 403.
+
+To complete this user's POC, obtain the canonical accessible Reddit /comments/ post URL
+or have the user supply an authorized saved MP4; then run the same intake and
+quality-gated transcription, OCR and lesson-generation pipeline.
