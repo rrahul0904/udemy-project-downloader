@@ -38,33 +38,6 @@ jobs:
       - name: Run canonical verification
         run: bash scripts/verify.sh
 
-  reddit-poc-source-preflight:
-    # One-time public source identity check requested Oct 30; no video downloaded.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/video-to-learning-poc-20261029'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - name: Install pinned Reddit extractor
-        run: python -m pip install yt-dlp==2026.8.19
-      - name: Resolve shared Reddit video metadata (no download)
-        shell: bash
-        run: |
-          python scripts/reddit_video_to_learning_poc.py \
-            --url 'https://www.reddit.com/r/aiagents/s/t94FoWZPvK' \
-            --metadata-only --no-index \
-            --download-root /tmp/course-intelligence-reddit-poc \
-            > /tmp/reddit-source-result.json || true
-          cat /tmp/reddit-source-result.json
-      - name: Attach source preflight response
-        uses: actions/upload-artifact@v4
-        with:
-          name: reddit-video-source-intake
-          path: /tmp/reddit-source-result.json
-          retention-days: 7
-
   browser-smoke:
     runs-on: ubuntu-latest
     steps:
