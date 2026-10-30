@@ -115,11 +115,25 @@ def resolve_reddit_video(url: str, folder: Path, *, metadata_only: bool = True) 
             metadata = _video_info(info, url)
             path = Path(ydl.prepare_filename(info)) if not metadata_only else None
     except (DownloadError, OSError, ValueError) as exc:
-        raise IntakeError(
-            "Reddit video resolution failed. The short link may require Reddit's redirect "
-            "or login, or the media may no longer be publicly available. "
-            f"Underlying error: {type(exc).__name__}."
-        ) from exc
+        description = str(exc)
+        if "HTTP Error 403" in description or "403: Blocked" in description:
+            reason = (
+                "Reddit returned HTTP 403: Blocked for this share URL. "
+                "This does not establish that the video was deleted. "
+                "Use the original canonical Reddit /comments/ permalink or an authorized local MP4."
+            )
+        elif "429" in description:
+            reason = (
+                "Reddit returned HTTP 429 Too Many Requests. Do not retry aggressively. "
+                "Use an already authorized local MP4 instead."
+            )
+        else:
+            reason = (
+                "Reddit video resolution failed. The short link may require Reddit's "
+                "redirect or login, or the source may not be publicly accessible. "
+                f"Underlying error: {type(exc).__name__}."
+            )
+        raise IntakeError(reason) from exc
 
     if path and not path.is_file():
         # yt-dlp may merge DASH video and separate audio into an MP4.
