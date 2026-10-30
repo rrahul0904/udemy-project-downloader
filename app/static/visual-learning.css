@@ -1,0 +1,12 @@
+.visual-evidence {display:grid;gap:16px;margin-top:16px}
+.visual-disclaimer {border-left:3px solid var(--ci-cyan,#38bdf8);padding:8px 12px;font-size:.86rem;opacity:.85}
+.visual-card {border:1px solid var(--border,#475569);border-radius:12px;padding:16px;background:var(--panel,#121b29);min-width:0}
+.visual-head {display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;font-size:.9rem}
+.visual-time {font-size:.85rem;text-decoration:underline}
+.visual-frame {display:block;width:100%;height:auto;max-height:560px;object-fit:contain;border-radius:8px;background:#0f172a}
+.visual-text {margin-top:12px}
+.visual-text summary {cursor:pointer;font-size:.9rem;font-weight:600}
+.visual-ocr {white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;border-radius:8px;background:rgba(127,127,127,.1);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem;line-height:1.5}
+.visual-description {white-space:pre-wrap;line-height:1.6}
+.visual-warnings {font-size:.84rem;opacity:.86;padding-left:24px}
+@media (max-width:650px){.visual-card{padding:10px}.visual-frame{max-height:340px}}

@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DATA_DIR=/app/data
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates ffmpeg \
+    && apt-get install -y --no-install-recommends ca-certificates ffmpeg tesseract-ocr libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin app
@@ -17,7 +17,17 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Optional CPU speech-to-text image for the transcriber profile only.
+ARG INSTALL_LOCAL_ASR=0
+COPY requirements-asr.txt .
+RUN if [ "$INSTALL_LOCAL_ASR" = "1" ]; then pip install --no-cache-dir -r requirements-asr.txt; fi
+
 COPY --chown=10001:10001 app ./app
+COPY --chown=10001:10001 scripts ./scripts
+
+# Check actual PyAV decode semantics at worker build time, without model download.
+RUN if [ "$INSTALL_LOCAL_ASR" = "1" ]; then python scripts/verify_asr_decoder.py; fi
+
 RUN mkdir -p /downloads /app/data \
     && chown -R 10001:10001 /downloads /app/data /app
 

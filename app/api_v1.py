@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
+import uuid
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from .database import CourseStore
+from .intelligent_learning import LearningGuideError, learning_model
 from .media_sources import MediaSourceError, SOURCE_REGISTRY, detect_media_source
 from .study_service import StudyService
 from .study_store import ARTIFACT_KINDS, StudyStore
 from .transcript_export import SUPPORTED_EXPORT_FORMATS, export_transcript
+from .visual_learning import analyze_video_visuals
 
 
 class ProgressPayload(BaseModel):
@@ -23,6 +27,11 @@ class ProgressPayload(BaseModel):
 
 class ArtifactGeneratePayload(BaseModel):
     transcript_id: str | None = Field(default=None, max_length=64)
+
+
+class VisualAnalysisPayload(BaseModel):
+    max_frames: int = Field(default=36, ge=2, le=60)
+    vision_model: str | None = Field(default=None, max_length=80)
 
 
 class GroundedChatPayload(BaseModel):
@@ -54,7 +63,93 @@ def _source_payload(spec, *, canonical_host: str | None = None) -> dict[str, Any
 def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["course-intelligence-v1"])
     study_store = StudyStore(store.path)
-    study = StudyService(store, study_store)
+    study = StudyService(store, study_store, download_root=download_root)
+    guide_jobs: dict[str, dict[str, Any]] = {}
+    visual_jobs: dict[str, dict[str, Any]] = {}
+
+    def visual_paths(lesson_id: str) -> tuple[Path, Path]:
+        try:
+            lesson = store.lesson(lesson_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Lesson not found.") from exc
+        rel_path = lesson.get("media_path")
+        if not rel_path:
+            raise HTTPException(status_code=409, detail="No downloaded video associated with this lesson. Archive authorized video media first.")
+        root = download_root.resolve()
+        media = (root / rel_path).resolve()
+        if not media.is_relative_to(root) or not media.is_file():
+            raise HTTPException(status_code=404, detail="Local lesson video not found.")
+        # Browser analyses use .visual-{lesson_id}; CLI/worker analyses write
+        # beside the source transcript in .<video-stem>.<lang>.learning/visuals.
+        # Discover those same-media artifacts without scanning other lessons,
+        # downloading another video, or following paths outside the library.
+        output = media.parent / f".visual-{lesson_id}"
+        if not (output / "visual-manifest.json").is_file():
+            prefix = f".{media.stem}."
+            for candidate in media.parent.iterdir():
+                if not candidate.name.startswith(prefix) or not candidate.name.endswith(".learning"):
+                    continue
+                visual_dir = candidate / "visuals"
+                if visual_dir.resolve().is_relative_to(root) and (visual_dir / "visual-manifest.json").is_file():
+                    output = visual_dir
+                    break
+        if not output.resolve().is_relative_to(root):
+            raise HTTPException(status_code=400, detail="Visual output path is outside the authorized library.")
+        return media, output
+
+    async def process_visuals(job_id: str, media: Path, folder: Path, max_frames: int, model: str | None) -> None:
+        visual_jobs[job_id]["status"] = "running"
+        try:
+            result = await asyncio.to_thread(
+                analyze_video_visuals, media, folder, max_frames=max_frames, vision_model=model
+            )
+            visual_jobs[job_id].update(status="complete", report=result)
+        except Exception as exc:
+            visual_jobs[job_id].update(status="failed", error=f"{type(exc).__name__}: {exc}"[:500])
+
+    @router.post("/lessons/{lesson_id}/visuals")
+    async def start_visuals(lesson_id: str, payload: VisualAnalysisPayload) -> dict[str, Any]:
+        media, folder = visual_paths(lesson_id)
+        if media.suffix.lower() not in {".mp4", ".mkv", ".webm", ".mov", ".m4v"}:
+            raise HTTPException(status_code=400, detail="Video visuals require a supported video file.")
+        if any(job.get("status") in {"queued", "running"} for job in visual_jobs.values()):
+            raise HTTPException(status_code=429, detail="A visual analysis is already running.")
+        # Keep in-memory status bounded; finished artifacts remain on durable disk.
+        for old_id in list(visual_jobs)[:-100]:
+            if visual_jobs[old_id]["status"] not in {"queued", "running"}:
+                del visual_jobs[old_id]
+        job_id = uuid.uuid4().hex
+        visual_jobs[job_id] = {"id": job_id, "lesson_id": lesson_id, "status": "queued"}
+        asyncio.create_task(process_visuals(job_id, media, folder, payload.max_frames, payload.vision_model))
+        return visual_jobs[job_id].copy()
+
+    @router.get("/lessons/{lesson_id}/visuals")
+    async def get_visuals(lesson_id: str) -> dict[str, Any]:
+        _, folder = visual_paths(lesson_id)
+        active = next((job for job in reversed(list(visual_jobs.values()))
+                       if job["lesson_id"] == lesson_id and job["status"] in {"queued", "running"}), None)
+        if active:
+            return active.copy()
+        report = folder / "visual-manifest.json"
+        if report.is_file():
+            try:
+                manifest = await asyncio.to_thread(lambda: json.loads(report.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                raise HTTPException(status_code=500, detail="Saved visual manifest is unreadable.")
+            return manifest
+        latest = next((job for job in reversed(list(visual_jobs.values()))
+                       if job["lesson_id"] == lesson_id), None)
+        return latest.copy() if latest else {"status": "not_started", "items": []}
+
+    @router.get("/lessons/{lesson_id}/visuals/frame/{frame_name}")
+    async def visual_frame(lesson_id: str, frame_name: str) -> FileResponse:
+        _, folder = visual_paths(lesson_id)
+        if not re.fullmatch(r"(?:periodic|scene)-\d{4}\.jpg", frame_name):
+            raise HTTPException(status_code=404, detail="Frame not found.")
+        frame = folder / "frames" / frame_name
+        if not frame.is_file():
+            raise HTTPException(status_code=404, detail="Frame not found.")
+        return FileResponse(frame, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
     @router.get("/media-sources")
     async def media_sources() -> dict[str, Any]:
@@ -107,6 +202,55 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
             return await asyncio.to_thread(store.put_progress, lesson_id, payload.last_position_ms, payload.completed)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="Lesson not found.") from exc
+
+    async def process_learning_guide(job_id: str, lesson_id: str, transcript_id: str | None) -> None:
+        guide_jobs[job_id]["status"] = "running"
+        try:
+            artifact = await asyncio.to_thread(study.generate, lesson_id, "learning_guide", transcript_id)
+            guide_jobs[job_id].update(status="complete", artifact_id=artifact["id"],
+                                      version=artifact["version"])
+        except Exception as exc:
+            # Do not echo model prompts, transcript text, or remote tracebacks to users.
+            if isinstance(exc, LearningGuideError):
+                reason = str(exc)
+            else:
+                reason = f"Learning generator failed ({type(exc).__name__}); inspect server logs."
+            guide_jobs[job_id].update(status="failed", error=reason[:600])
+
+    @router.post("/lessons/{lesson_id}/learning-guide/jobs")
+    async def start_learning_guide(lesson_id: str, payload: ArtifactGeneratePayload | None = None) -> dict[str, Any]:
+        if not learning_model():
+            raise HTTPException(
+                status_code=503,
+                detail="Configure CI_LEARNING_MODEL with a pulled local Ollama model, "
+                       "then restart Course Intelligence. No low-quality transcript recap will be substituted.",
+            )
+        try:
+            lesson_data = await asyncio.to_thread(store.lesson, lesson_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Lesson not found.") from exc
+        requested = payload.transcript_id if payload else None
+        variants = lesson_data.get("transcripts") or []
+        if not variants:
+            raise HTTPException(status_code=409, detail="Lesson has no indexed transcript.")
+        if requested and not any(item["id"] == requested for item in variants):
+            raise HTTPException(status_code=400, detail="Transcript does not belong to this lesson.")
+        if any(job["status"] in {"queued", "running"} for job in guide_jobs.values()):
+            raise HTTPException(status_code=429, detail="A learning guide is already generating.")
+        for old_id in list(guide_jobs)[:-100]:
+            if guide_jobs[old_id]["status"] not in {"queued", "running"}:
+                del guide_jobs[old_id]
+        job_id = uuid.uuid4().hex
+        guide_jobs[job_id] = {"id": job_id, "lesson_id": lesson_id, "status": "queued"}
+        asyncio.create_task(process_learning_guide(job_id, lesson_id, requested))
+        return guide_jobs[job_id].copy()
+
+    @router.get("/lessons/{lesson_id}/learning-guide/jobs/{job_id}")
+    async def learning_guide_job(lesson_id: str, job_id: str) -> dict[str, Any]:
+        job = guide_jobs.get(job_id)
+        if not job or job["lesson_id"] != lesson_id:
+            raise HTTPException(status_code=404, detail="Learning generation job not found.")
+        return job.copy()
 
     @router.get("/lessons/{lesson_id}/artifacts")
     async def lesson_artifacts(lesson_id: str, kind: str | None = None) -> dict[str, Any]:

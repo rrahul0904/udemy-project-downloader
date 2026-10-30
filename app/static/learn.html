@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="/static/learn.css" />
   <link rel="stylesheet" href="/static/os.css" />
   <link rel="stylesheet" href="/static/learn-os.css" />
+  <link rel="stylesheet" href="/static/visual-learning.css" />
+  <link rel="stylesheet" href="/static/learning-guide.css" />
 </head>
 <body>
 <div class="ci-shell">
@@ -17,7 +19,7 @@
   </header>
 
   <main class="learn-page">
-    <section class="learn-hero"><div><span class="ci-eyebrow">LEARN · COURSE → TRANSCRIPT → KNOWLEDGE</span><h1>Course Intelligence</h1><p>Search archived lessons, read source transcripts, keep private notes, bookmark exact lecture moments, and generate deterministic source-cited study material from the transcript itself.</p></div><div class="learn-stats" aria-live="polite"><div class="stat-chip"><strong id="course-count">0</strong><span>courses</span></div><div class="stat-chip"><strong id="lesson-count">0</strong><span>lessons</span></div><div class="stat-chip"><strong>SQLite</strong><span>durable state</span></div></div></section>
+    <section class="learn-hero"><div><span class="ci-eyebrow">LEARN · COURSE → TRANSCRIPT → KNOWLEDGE</span><h1>Course Intelligence</h1><p>Search archived lessons and source transcripts, bookmark exact lecture moments, review extracted evidence, and generate complete instructional learning guides using an explicitly configured local model.</p></div><div class="learn-stats" aria-live="polite"><div class="stat-chip"><strong id="course-count">0</strong><span>courses</span></div><div class="stat-chip"><strong id="lesson-count">0</strong><span>lessons</span></div><div class="stat-chip"><strong>SQLite</strong><span>durable state</span></div></div></section>
 
     <section class="workspace-grid">
       <aside class="library-panel">
@@ -35,26 +37,30 @@
           <div class="lesson-meta" id="lesson-meta"></div>
           <div class="tabbar" role="tablist" aria-label="Lesson workspace">
             <button class="tab active" data-tab="overview" role="tab">Overview</button>
+            <button class="tab" data-tab="learning-guide" role="tab">Learn This Video</button>
             <button class="tab" data-tab="transcript" role="tab">Transcript</button>
-            <button class="tab" data-tab="ai-notes" role="tab">AI Notes</button>
+            <button class="tab" data-tab="ai-notes" role="tab">Transcript Excerpts</button>
             <button class="tab" data-tab="flashcards" role="tab">Flashcards</button>
             <button class="tab" data-tab="quiz" role="tab">Quiz</button>
             <button class="tab" data-tab="concept-map" role="tab">Concept Map</button>
             <button class="tab" data-tab="ask-course" role="tab">Ask Course</button>
             <button class="tab" data-tab="notes" role="tab">My Notes</button>
             <button class="tab" data-tab="bookmarks" role="tab">Bookmarks</button>
+            <button class="tab" data-tab="visuals" role="tab">Visual Evidence</button>
             <button class="tab" data-tab="files" role="tab">Files</button>
           </div>
 
           <section id="tab-overview" class="tab-panel"><div id="lesson-overview" class="artifact-grid"><div class="ci-empty">Lesson overview will appear here.</div></div></section>
+          <section id="tab-learning-guide" class="tab-panel" hidden><div class="study-panel-head"><div><h3>What you learned — complete instructional lesson</h3><p>Actual explanations, workflows, worked examples, visual evidence, practice answers and exact lecture citations. Generated with a configured local AI model; always review before relying on it.</p></div><button id="learning-guide-generate" class="generate-button" type="button">Generate full learning material</button></div><p id="learning-guide-status" class="muted" role="status" aria-live="polite">Choose a lesson to generate a substantive study guide.</p><div id="learning-guide-content" class="learning-guide"><div class="ci-empty">No complete instructional lesson has been generated yet. Transcript excerpts are not a finished course.</div></div></section>
           <section id="tab-transcript" class="tab-panel" hidden><div class="transcript-toolbar"><label class="search grow"><span class="ci-sr-only">Search transcript</span><input id="transcript-search" type="search" placeholder="Search this transcript…" /></label><span id="search-count" class="muted"></span></div><div id="transcript" class="transcript"></div></section>
-          <section id="tab-ai-notes" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Source-grounded study notes</h3><p>Generated locally from transcript segments. Every bullet includes lecture evidence.</p></div><button class="generate-button" data-generate="notes" type="button">Generate notes</button></div><div id="ai-notes-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No generated notes yet.</div></div></section>
+          <section id="tab-ai-notes" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Literal transcript excerpts (not an AI lesson)</h3><p>This is a deterministic extraction of source text. For actual teaching with explanations, use Learn This Video.</p></div><button class="generate-button" data-generate="notes" type="button">Extract excerpts</button></div><div id="ai-notes-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No generated notes yet.</div></div></section>
           <section id="tab-flashcards" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Flashcards</h3><p>Questions and answers are derived from cited source segments.</p></div><button class="generate-button" data-generate="flashcards" type="button">Generate cards</button></div><div id="flashcards-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No flashcard deck yet.</div></div></section>
           <section id="tab-quiz" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Quiz</h3><p>Mixed multiple-choice and short-answer practice with cited explanations.</p></div><button class="generate-button" data-generate="quiz" type="button">Generate quiz</button></div><div id="quiz-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No quiz yet.</div></div></section>
           <section id="tab-concept-map" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Concept map</h3><p>Transcript concepts and co-occurrence relationships, each retaining source evidence.</p></div><button class="generate-button" data-generate="concept_map" type="button">Generate map</button></div><div id="concept-map-content" data-ai-artifact class="artifact-grid"><div class="ci-empty">No concept map yet.</div></div></section>
           <section id="tab-ask-course" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Ask Course</h3><p><span class="ci-badge cyan">COURSE_GROUNDED</span> Answers only from matching transcript evidence. No outside model knowledge is silently added.</p></div></div><form id="ask-course-form" class="ask-box"><input id="ask-course-input" type="search" maxlength="2000" placeholder="Where does this lesson explain…?" required /><button class="generate-button" type="submit">Find evidence</button></form><div id="ask-course-result" class="ask-result" aria-live="polite"></div></section>
           <section id="tab-notes" class="tab-panel" hidden><div class="ci-privacy" style="margin-bottom:12px"><span>●</span><div><strong>My Notes are private writing.</strong> Generated study material will never overwrite your personal notes.</div></div><textarea id="lesson-notes" rows="18" maxlength="262144" placeholder="Write your own notes, key takeaways, questions, or study plan…"></textarea><div class="note-actions"><button id="save-notes" type="button">Save notes</button><span id="note-status" class="muted" role="status"></span></div></section>
           <section id="tab-bookmarks" class="tab-panel" hidden><p class="muted">Bookmarks are durable source anchors. Select one to return to the matching transcript timestamp.</p><div id="bookmark-list" class="bookmark-list"></div></section>
+          <section id="tab-visuals" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Video slides, code and diagrams</h3><p>Extract timestamped frames and OCR from locally archived video. All results require visual review.</p></div><button id="visual-analyze" class="generate-button" type="button">Analyze lesson video</button></div><p id="visual-status" class="muted" role="status">Select a lesson containing a downloaded video.</p><div id="visual-evidence" class="visual-evidence"><div class="ci-empty">No visual evidence generated.</div></div></section>
           <section id="tab-files" class="tab-panel" hidden><div class="study-panel-head"><div><h3>Lesson and course files</h3><p>Open downloaded materials or hand them to Study Lab when the file type is compatible.</p></div><a class="ci-button-secondary" href="/lab" style="text-decoration:none">Open Study Lab</a></div><div id="lesson-files" class="files-list"><div class="ci-empty">No indexed attachments for this lesson/course.</div></div></section>
         </div>
       </section>
@@ -65,5 +71,7 @@
 <script src="/static/learn.js" type="module"></script>
 <script src="/static/learn-viewer-link.js" type="module"></script>
 <script src="/static/learn-study.js" type="module"></script>
+<script src="/static/learn-visuals.js" type="module"></script>
+<script src="/static/learn-learning-guide.js" type="module"></script>
 </body>
 </html>

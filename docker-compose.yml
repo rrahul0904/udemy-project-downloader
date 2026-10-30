@@ -15,7 +15,33 @@ services:
       MAX_DOWNLOAD_BYTES: ${MAX_DOWNLOAD_BYTES:-0}
       DOWNLOAD_DIR: /downloads
       DATA_DIR: /app/data
+      CI_LEARNING_MODEL: ${CI_LEARNING_MODEL:-}
+      CI_OLLAMA_URL: ${CI_OLLAMA_URL:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./downloads:/downloads
       - ./data:/app/data
     restart: unless-stopped
+
+  # On-demand worker: uses the same bound downloads/data as the web app.
+  # Does not start during docker compose up (profile-gated).
+  transcript-worker:
+    profiles: ["transcribe"]
+    build:
+      context: .
+      args:
+        INSTALL_LOCAL_ASR: "1"
+    image: udemy-project-downloader-transcriber:local
+    init: true
+    environment:
+      APP_ENV: development
+      DOWNLOAD_DIR: /downloads
+      DATA_DIR: /app/data
+      HF_HOME: /app/data/.cache/huggingface
+      XDG_CACHE_HOME: /app/data/.cache
+    volumes:
+      - ./downloads:/downloads
+      - ./data:/app/data
+    restart: "no"
+    command: ["python", "scripts/video_to_learning_poc.py", "--help"]

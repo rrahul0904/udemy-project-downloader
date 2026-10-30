@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 STUDY_SCHEMA_VERSION = 3
-ARTIFACT_KINDS = {"summary", "notes", "flashcards", "quiz", "concept_map"}
+ARTIFACT_KINDS = {"summary", "notes", "flashcards", "quiz", "concept_map", "learning_guide"}
 
 
 def _now() -> str:

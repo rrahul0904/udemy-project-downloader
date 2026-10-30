@@ -81,8 +81,8 @@ test('course intelligence persists personal notes and bookmarks and keeps ground
   await page.getByRole('button', { name: 'Save notes' }).click();
   await expect(page.locator('#note-status')).toContainText('Saved');
 
-  await page.getByRole('tab', { name: 'AI Notes', exact: true }).click();
-  await page.getByRole('button', { name: /Generate notes|Regenerate/ }).click();
+  await page.getByRole('tab', { name: 'Transcript Excerpts', exact: true }).click();
+  await page.getByRole('button', { name: /Extract excerpts|Regenerate/ }).click();
   await expect(page.locator('#ai-notes-content')).toContainText('SQLite FTS5');
   await expect(page.locator('#ai-notes-content').locator('.source-citation').first()).toBeVisible();
 
@@ -98,6 +98,16 @@ test('course intelligence persists personal notes and bookmarks and keeps ground
   await expect(page.locator('#lesson-notes')).toHaveValue('Persistent browser smoke note');
   await page.getByRole('tab', { name: 'Bookmarks', exact: true }).click();
   await expect(page.locator('#bookmark-list')).toContainText('SQLite FTS5');
+});
+
+test('full learning tab rejects extractive-only generation when AI model is not configured', async ({ page }) => {
+  await page.goto('/learn');
+  await page.getByRole('button', { name: /Introduction/ }).first().click();
+  await page.getByRole('tab', { name: 'Learn This Video', exact: true }).click();
+  await expect(page.locator('#learning-guide-content')).toContainText('No complete instructional lesson');
+  await page.getByRole('button', { name: 'Generate full learning material' }).click();
+  await expect(page.locator('#learning-guide-status')).toContainText('Configure CI_LEARNING_MODEL');
+  await expect(page.locator('#learning-guide-content')).not.toContainText('Topic 1');
 });
 
 test('synchronized viewer exposes sources exports bookmarks deep links and durable progress', async ({ page }) => {

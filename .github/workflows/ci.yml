@@ -63,6 +63,13 @@ jobs:
       - name: Build production image
         run: docker build -t course-intelligence:${{ github.sha }} .
 
+  asr-container-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build optional ASR worker and verify real audio decode
+        run: docker build --build-arg INSTALL_LOCAL_ASR=1 -t course-intelligence-asr:${{ github.sha }} .
+
   render-blueprint:
     runs-on: ubuntu-latest
     steps:
