@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from .database import CourseStore
+from .intelligent_learning import LearningGuideError, learning_model
 from .media_sources import MediaSourceError, SOURCE_REGISTRY, detect_media_source
 from .study_service import StudyService
 from .study_store import ARTIFACT_KINDS, StudyStore
@@ -62,7 +63,8 @@ def _source_payload(spec, *, canonical_host: str | None = None) -> dict[str, Any
 def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
     router = APIRouter(prefix="/api/v1", tags=["course-intelligence-v1"])
     study_store = StudyStore(store.path)
-    study = StudyService(store, study_store)
+    study = StudyService(store, study_store, download_root=download_root)
+    guide_jobs: dict[str, dict[str, Any]] = {}
     visual_jobs: dict[str, dict[str, Any]] = {}
 
     def visual_paths(lesson_id: str) -> tuple[Path, Path]:
@@ -200,6 +202,55 @@ def build_api_v1(store: CourseStore, download_root: Path) -> APIRouter:
             return await asyncio.to_thread(store.put_progress, lesson_id, payload.last_position_ms, payload.completed)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="Lesson not found.") from exc
+
+    async def process_learning_guide(job_id: str, lesson_id: str, transcript_id: str | None) -> None:
+        guide_jobs[job_id]["status"] = "running"
+        try:
+            artifact = await asyncio.to_thread(study.generate, lesson_id, "learning_guide", transcript_id)
+            guide_jobs[job_id].update(status="complete", artifact_id=artifact["id"],
+                                      version=artifact["version"])
+        except Exception as exc:
+            # Do not echo model prompts, transcript text, or remote tracebacks to users.
+            if isinstance(exc, LearningGuideError):
+                reason = str(exc)
+            else:
+                reason = f"Learning generator failed ({type(exc).__name__}); inspect server logs."
+            guide_jobs[job_id].update(status="failed", error=reason[:600])
+
+    @router.post("/lessons/{lesson_id}/learning-guide/jobs")
+    async def start_learning_guide(lesson_id: str, payload: ArtifactGeneratePayload | None = None) -> dict[str, Any]:
+        if not learning_model():
+            raise HTTPException(
+                status_code=503,
+                detail="Configure CI_LEARNING_MODEL with a pulled local Ollama model, "
+                       "then restart Course Intelligence. No low-quality transcript recap will be substituted.",
+            )
+        try:
+            lesson_data = await asyncio.to_thread(store.lesson, lesson_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Lesson not found.") from exc
+        requested = payload.transcript_id if payload else None
+        variants = lesson_data.get("transcripts") or []
+        if not variants:
+            raise HTTPException(status_code=409, detail="Lesson has no indexed transcript.")
+        if requested and not any(item["id"] == requested for item in variants):
+            raise HTTPException(status_code=400, detail="Transcript does not belong to this lesson.")
+        if any(job["status"] in {"queued", "running"} for job in guide_jobs.values()):
+            raise HTTPException(status_code=429, detail="A learning guide is already generating.")
+        for old_id in list(guide_jobs)[:-100]:
+            if guide_jobs[old_id]["status"] not in {"queued", "running"}:
+                del guide_jobs[old_id]
+        job_id = uuid.uuid4().hex
+        guide_jobs[job_id] = {"id": job_id, "lesson_id": lesson_id, "status": "queued"}
+        asyncio.create_task(process_learning_guide(job_id, lesson_id, requested))
+        return guide_jobs[job_id].copy()
+
+    @router.get("/lessons/{lesson_id}/learning-guide/jobs/{job_id}")
+    async def learning_guide_job(lesson_id: str, job_id: str) -> dict[str, Any]:
+        job = guide_jobs.get(job_id)
+        if not job or job["lesson_id"] != lesson_id:
+            raise HTTPException(status_code=404, detail="Learning generation job not found.")
+        return job.copy()
 
     @router.get("/lessons/{lesson_id}/artifacts")
     async def lesson_artifacts(lesson_id: str, kind: str | None = None) -> dict[str, Any]:
