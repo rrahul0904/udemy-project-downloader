@@ -15,6 +15,10 @@ services:
       MAX_DOWNLOAD_BYTES: ${MAX_DOWNLOAD_BYTES:-0}
       DOWNLOAD_DIR: /downloads
       DATA_DIR: /app/data
+      CI_LEARNING_MODEL: ${CI_LEARNING_MODEL:-}
+      CI_OLLAMA_URL: ${CI_OLLAMA_URL:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./downloads:/downloads
       - ./data:/app/data
