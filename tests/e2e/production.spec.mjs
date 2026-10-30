@@ -81,8 +81,8 @@ test('course intelligence persists personal notes and bookmarks and keeps ground
   await page.getByRole('button', { name: 'Save notes' }).click();
   await expect(page.locator('#note-status')).toContainText('Saved');
 
-  await page.getByRole('tab', { name: 'AI Notes', exact: true }).click();
-  await page.getByRole('button', { name: /Generate notes|Regenerate/ }).click();
+  await page.getByRole('tab', { name: 'Transcript Excerpts', exact: true }).click();
+  await page.getByRole('button', { name: /Extract excerpts|Regenerate/ }).click();
   await expect(page.locator('#ai-notes-content')).toContainText('SQLite FTS5');
   await expect(page.locator('#ai-notes-content').locator('.source-citation').first()).toBeVisible();
 
