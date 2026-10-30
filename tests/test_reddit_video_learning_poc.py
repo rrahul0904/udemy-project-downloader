@@ -78,6 +78,23 @@ class RedditVideoPOCTests(unittest.TestCase):
             self.assertEqual(len(manifest), 1)
             self.assertIn("source_validated", manifest[0].read_text(encoding="utf-8"))
 
+    def test_reddit_403_is_explicit_and_does_not_suggest_bypass(self):
+        from yt_dlp.utils import DownloadError
+        class FakeDL:
+            def __init__(self, *_args, **_kwargs):
+                pass
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return None
+            def extract_info(self, *args, **kwargs):
+                raise DownloadError("HTTP Error 403: Blocked")
+        with patch("yt_dlp.YoutubeDL", FakeDL), tempfile.TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(module.IntakeError, "HTTP 403: Blocked") as ctx:
+                module.resolve_reddit_video(URL, Path(temp))
+            self.assertIn("canonical Reddit", str(ctx.exception))
+            self.assertNotIn("bypass", str(ctx.exception).casefold())
+
     def test_unresolvable_url_exits_blocked_not_fake_transcription(self):
         with tempfile.TemporaryDirectory() as temp:
             with patch.object(module, "resolve_reddit_video", side_effect=module.IntakeError("Unavailable post")), patch("builtins.print") as output:
