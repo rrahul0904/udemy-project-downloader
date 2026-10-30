@@ -212,6 +212,15 @@ def validate_guide(raw: dict[str, Any], transcript: dict[str, Any],
         })
     if len(all_source_indices) < min(5, len(source)):
         raise LearningGuideError("The instructional chapters cite too little of the lecture.")
+    full_times = [s["start_ms"] for s in source.values() if isinstance(s.get("start_ms"), int)]
+    chapter_times = [source[i]["start_ms"] for i in all_source_indices
+                     if isinstance(source[i].get("start_ms"), int)]
+    if (full_times and chapter_times and max(full_times) - min(full_times) >= 300_000
+        and max(chapter_times) - min(chapter_times) < (max(full_times) - min(full_times)) * 0.60):
+        raise LearningGuideError(
+            "Instructional chapters do not adequately cover the lecture timeline. "
+            "Include the key demonstrations and conclusions from later in the video."
+        )
     step_list = examples.get("steps")
     if not isinstance(step_list, list) or len(step_list) < 3:
         raise LearningGuideError("Worked example must have at least three actionable steps.")
@@ -318,5 +327,18 @@ def generate_learning_guide(
         f"{frame_text or 'None available'}\n"
     )
     responder = generator or _model_response
-    response = responder(prompt, model)
-    return validate_guide(response, transcript, source, available, model)
+    last_error: LearningGuideError | None = None
+    for attempt in range(2):
+        response = responder(prompt, model)
+        try:
+            return validate_guide(response, transcript, source, available, model)
+        except LearningGuideError as exc:
+            last_error = exc
+            if attempt == 0:
+                prompt += (
+                    "\nYour previous JSON failed mandatory educational quality validation: "
+                    + str(exc)[:350] +
+                    "\nRegenerate a COMPLETE, source-grounded teaching guide meeting every "
+                    "specified depth and citation requirement. Do not invent evidence.\n"
+                )
+    raise last_error or LearningGuideError("Local model did not return a usable learning guide.")
