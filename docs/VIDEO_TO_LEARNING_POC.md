@@ -240,3 +240,81 @@ Course Intelligence web UI normally stores visuals under .visual-<lesson_id>. Th
 Then open http://127.0.0.1:8080/learn, select the indexed Snowflake CoCo lesson, and choose Visual Evidence.
 Transcript, visual notes and quality JSON are also stored locally under ./downloads. On macOS, hidden .learning directories
 can be revealed in Finder with Cmd+Shift+Period or browsed with a terminal command.
+
+
+## Wave 3 implementation — real "Learn This Video" instructional guides
+
+**Reason for change:** A plain list of seven points is NOT sufficient learning material.
+The application now requires substantive teaching synthesis and stops returning a generic
+transcript recap as if it were a fully developed learning module.
+
+### Setup for your Mac (Ollama, local generation)
+
+    brew install ollama
+    ollama serve
+
+In another terminal:
+
+    ollama pull qwen2.5:7b
+
+In this repository's existing .env add:
+
+    CI_LEARNING_MODEL=qwen2.5:7b
+    CI_OLLAMA_URL=http://host.docker.internal:11434
+
+Then rebuild the web service:
+
+    git pull --ff-only
+    docker compose up -d --build
+
+Open http://127.0.0.1:8080/learn, choose the Snowflake CoCo lesson, select
+**Learn This Video**, then **Generate full learning material**. The browser polls
+a background job so it remains interactive during synthesis. The resulting versioned
+guide appears in the same lesson and remains in SQLite across container restarts.
+
+This uses the **existing** 179-segment Snowflake transcript and available 48-frame OCR
+manifest; it does not re-download or re-transcribe YouTube. The model runs on the
+user's Mac via the localhost-only Ollama connection. Model installation and inference
+are **not automatic** and require explicit setup. Downloaded material should only be
+processed with appropriate access and rights.
+
+### Deliverable and QA gates
+
+The model writes structured JSON, never free-form scraped HTML. The renderer escapes all
+user-supplied and AI-authored text, and uses original source timestamps and saved
+frame images as evidence. Every guide must contain:
+
+1. A meaningful introductory explanation (minimum 180 characters) and 3+ outcomes.
+2. At least four substantial takeaways, each with valid transcript citations.
+3. At least three complete instructional chapters, each with actual explanation,
+   why it matters, at least two concrete steps, pitfalls and citations.
+4. Relevant screenshots cited from the actual video's visual manifest when present.
+5. A worked example with 3+ steps, interpretation, caveats and source references.
+6. At least two learner exercises with worked answers and source citations.
+7. Review flags and a visible *AI draft requires review* status.
+
+If a model cannot generate these, references nonexistent transcript segments or
+screenshots, or returns a thin generic list, generation fails with an actionable
+message **without saving a false successful artifact**. Model-generated information
+is still not independently fact-checked; a cited timestamp alone does not prove
+the generated explanation is correct.
+
+The new artifact is \`learning_guide\` in the existing SQLite \`study_artifacts\` table.
+It appears in \`GET /api/v1/lessons/{lesson_id}/artifacts\` and is versioned. The
+JSON API for generation is:
+
+    POST /api/v1/lessons/{lesson_id}/learning-guide/jobs
+    GET /api/v1/lessons/{lesson_id}/learning-guide/jobs/{job_id}
+
+Generation jobs are bounded and held in process memory. Completed teaching artifacts
+are durable in SQLite, but an in-flight job cannot resume after process restart;
+resumable production queue is a future requirement.
+
+### Remaining production gates
+
+- Run full synthesis with a local model on the actual Snowflake CoCo video.
+- Inspect the actual learning chapters against original visual screenshots and narration.
+- Correct model hallucinations, ambiguous software claims and numerical discrepancies.
+- Decide and document accepted quality thresholds and human review before general release.
+- Course/playlist-scale background queue and provider-agnostic model selection are future waves.
+
